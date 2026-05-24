@@ -1,0 +1,3587 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0f1e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>PharmaPOS</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- html5-qrcode -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <!-- Google Fonts: Syne (display) + Noto Sans Arabic (body/bilingual) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand:  { DEFAULT: '#00d4aa', dark: '#00a885', light: '#7fffd4' },
+            surface: { 1: '#0a0f1e', 2: '#111827', 3: '#1a2235', 4: '#232f46' },
+            ink:    { DEFAULT: '#e8f0fe', muted: '#8899bb', faint: '#2d3f61' },
+          },
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            body:    ['Noto Sans Arabic', 'Syne', 'sans-serif'],
+          },
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* ══════════════════════════════════════════════════════
+       PHARMAPOS — LIGHT MODE DESIGN SYSTEM
+       Primary:   #2563eb (blue-600)
+       Surface:   #f8fafc (slate-50) base, #ffffff cards
+       Text:      #0f172a primary, #64748b secondary, #94a3b8 muted
+       Border:    #e2e8f0 default, #cbd5e1 strong
+       Danger:    #ef4444  Warning: #f59e0b  Success: #10b981
+    ══════════════════════════════════════════════════════ */
+
+    :root {
+      --safe-top:    env(safe-area-inset-top,    0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --blue:   #2563eb;
+      --blue-d: #1d4ed8;
+      --blue-l: #eff6ff;
+      --green:  #10b981;
+      --red:    #ef4444;
+      --amber:  #f59e0b;
+      --surface:#f8fafc;
+      --card:   #ffffff;
+      --border: #e2e8f0;
+      --border-s:#cbd5e1;
+      --ink:    #0f172a;
+      --ink-2:  #334155;
+      --ink-3:  #64748b;
+      --ink-4:  #94a3b8;
+      --ink-5:  #cbd5e1;
+    }
+
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+
+    html, body {
+      height: 100%; width: 100%; overflow: hidden;
+      background: var(--surface);
+      font-family: 'Noto Sans Arabic', 'Syne', sans-serif;
+      color: var(--ink);
+    }
+
+    /* ── App Shell ── */
+    #app {
+      display: flex; flex-direction: column;
+      height: 100dvh; width: 100%;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+      position: relative; overflow: hidden;
+    }
+
+    /* ── Topbar ── */
+    #topbar {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px 10px;
+      background: #ffffff;
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 50;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.25rem;
+      background: linear-gradient(135deg, #2563eb 30%, #3b82f6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    /* ── Lang Toggle ── */
+    .lang-pill {
+      display: flex; background: #f1f5f9; border-radius: 20px; padding: 3px; gap: 2px;
+    }
+    .lang-btn {
+      font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 700;
+      padding: 4px 12px; border-radius: 16px; border: none; cursor: pointer;
+      transition: all .25s ease; color: var(--ink-3); background: transparent;
+      letter-spacing: .05em;
+    }
+    .lang-btn.active { background: var(--blue); color: #ffffff; }
+
+    /* ── Screens ── */
+    #screen-wrap { flex: 1; overflow: hidden; position: relative; }
+    .screen {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; overflow: hidden;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s ease;
+    }
+    .screen.active { opacity: 1; pointer-events: all; }
+
+    /* ── POS Layout ── */
+    #pos-screen { background: var(--surface); }
+
+    /* Scanner area */
+    #scanner-section { flex-shrink: 0; position: relative; padding: 12px 16px 0; }
+    #scanner-card {
+      background: #ffffff;
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      position: relative;
+    }
+
+    /* html5-qrcode overrides — iOS Safari critical */
+    #reader { width: 100%; min-height: 220px; background: #f1f5f9; position: relative; }
+    #reader video {
+      object-fit: cover !important; border-radius: 0 !important;
+      width: 100% !important; height: 100% !important;
+      max-height: 240px !important; display: block !important;
+      -webkit-playsinline: true;
+    }
+    #reader img { display: none !important; }
+    #reader__scan_region { border-radius: 0 !important; }
+    #reader__scan_type_change_anchor { display: none !important; }
+    #reader__dashboard_section_swaplink { display: none !important; }
+    #reader__status_span {
+      background: #eff6ff !important; color: var(--blue) !important;
+      font-family: 'Syne', sans-serif !important; font-size: 0.75rem !important;
+      border-radius: 6px !important;
+    }
+    #reader__dashboard { background: #ffffff !important; padding: 8px 12px !important; }
+    #reader__dashboard_section_csr button,
+    #reader__dashboard_section_fsr button {
+      background: var(--blue) !important; color: #ffffff !important;
+      border: none !important; border-radius: 10px !important;
+      font-family: 'Syne', sans-serif !important; font-weight: 700 !important;
+      padding: 8px 20px !important; font-size: 0.8rem !important; cursor: pointer !important;
+    }
+
+    /* Scan overlay corners */
+    .scan-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+    .corner { position: absolute; width: 22px; height: 22px; border-color: var(--blue); border-style: solid; border-width: 0; }
+    .corner.tl { top: 12px; left: 12px; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 6px; }
+    .corner.tr { top: 12px; right: 12px; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 6px; }
+    .corner.bl { bottom: 12px; left: 12px; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 6px; }
+    .corner.br { bottom: 12px; right: 12px; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 6px; }
+
+    @keyframes scan-line {
+      0%   { top: 15%; opacity: 1; }
+      100% { top: 85%; opacity: 0.4; }
+    }
+    .scan-line {
+      position: absolute; left: 10%; right: 10%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--blue), transparent);
+      border-radius: 2px; animation: scan-line 2s ease-in-out infinite alternate;
+    }
+    #scanner-card.idle .scan-line { display: none; }
+
+    /* Tap-to-scan placeholder */
+    #tap-placeholder {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 220px; gap: 10px; padding: 20px; cursor: pointer;
+    }
+    #tap-placeholder.hidden { display: none; }
+
+    .scan-icon-ring {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: #eff6ff; border: 2px dashed #93c5fd;
+      display: flex; align-items: center; justify-content: center;
+      animation: pulse-ring 2.5s ease infinite;
+    }
+    @keyframes pulse-ring {
+      0%,100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.15); }
+      50%      { box-shadow: 0 0 0 12px rgba(37,99,235,0); }
+    }
+
+    /* Scanner label bar */
+    .scanner-label {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px 12px;
+    }
+    .scan-badge {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: .08em;
+      color: var(--blue); background: #eff6ff;
+      padding: 3px 10px; border-radius: 12px; text-transform: uppercase;
+    }
+    .scan-count-badge { font-size: 0.65rem; font-weight: 600; color: var(--ink-3); }
+
+    /* ── Cart Section ── */
+    #cart-section {
+      flex: 1; overflow-y: auto; padding: 6px 16px 0;
+      overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    }
+    #cart-section::-webkit-scrollbar { display: none; }
+
+    .cart-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0 8px;
+    }
+    .cart-title {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
+      color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em;
+    }
+    .clear-btn {
+      font-size: 0.72rem; color: var(--red);
+      background: #fef2f2; border: none;
+      padding: 3px 10px; border-radius: 10px; cursor: pointer;
+      font-family: 'Syne', sans-serif; font-weight: 600;
+    }
+
+    /* Cart Item Card */
+    .cart-item {
+      background: #ffffff; border-radius: 14px; padding: 12px 14px; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      animation: item-in .3s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes item-in {
+      from { opacity: 0; transform: translateY(12px) scale(0.96); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .item-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-name { font-weight: 700; font-size: 0.88rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-meta { font-size: 0.72rem; color: var(--ink-3); margin-top: 1px; }
+    .item-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .qty-btn {
+      width: 28px; height: 28px; border-radius: 8px; border: none;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 700; cursor: pointer;
+      transition: transform .15s ease, background .15s ease;
+    }
+    .qty-btn:active { transform: scale(0.88); }
+    .qty-minus { background: #f1f5f9; color: var(--ink-3); }
+    .qty-plus  { background: #eff6ff; color: var(--blue); }
+    .qty-val   { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: var(--ink); min-width: 20px; text-align: center; }
+    .item-price { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.88rem; color: var(--blue); flex-shrink: 0; text-align: end; min-width: 52px; }
+
+    /* Empty cart */
+    #empty-cart { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 0; gap: 8px; color: var(--ink-4); }
+    #empty-cart svg { width: 40px; height: 40px; opacity: .4; }
+    #empty-cart p { font-size: 0.8rem; font-weight: 600; }
+
+    /* ── Checkout Footer ── */
+    #checkout-footer {
+      flex-shrink: 0; padding: 12px 16px 8px;
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    }
+    .totals-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .totals-label { font-size: 0.78rem; color: var(--ink-3); font-weight: 600; }
+    .totals-label span { display: block; font-size: 0.65rem; color: var(--ink-4); margin-top: 1px; }
+    .totals-amount { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.5rem; color: var(--ink); }
+    .totals-currency { font-size: 0.75rem; color: var(--ink-3); font-weight: 600; margin-inline-start: 3px; }
+
+    .checkout-btn {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff; border: none; border-radius: 16px;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem;
+      letter-spacing: .03em; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+      transition: transform .15s ease, box-shadow .15s ease, opacity .15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .checkout-btn:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(37,99,235,0.2); }
+    .checkout-btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* ── Bottom Nav ── */
+    #bottom-nav {
+      flex-shrink: 0; display: flex; align-items: stretch;
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      padding-bottom: calc(var(--safe-bottom) + 2px);
+      box-shadow: 0 -1px 0 var(--border);
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 8px 4px 6px; gap: 3px;
+      cursor: pointer; border: none; background: transparent;
+      transition: color .2s ease; color: var(--ink-4); position: relative;
+    }
+    .nav-item.active { color: var(--blue); }
+    .nav-item svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .nav-label { font-size: 0.6rem; font-weight: 700; letter-spacing: .04em; }
+    .nav-dot {
+      position: absolute; top: 6px; width: 4px; height: 4px;
+      background: var(--blue); border-radius: 2px;
+      transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    .nav-item:not(.active) .nav-dot { transform: scale(0); }
+    .nav-item.active .nav-dot { transform: scale(1); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; top: calc(var(--safe-top) + 66px); left: 50%; z-index: 1000;
+      transform: translateX(-50%) translateY(-8px);
+      background: #1e293b; border: 1px solid #334155;
+      color: #f8fafc; border-radius: 14px;
+      padding: 10px 20px; font-size: 0.82rem; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      opacity: 0; transition: opacity .25s, transform .25s;
+      pointer-events: none; white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.success .toast-dot { background: var(--green); }
+    #toast.error   .toast-dot { background: var(--red); }
+    .toast-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Modals (shared base) ── */
+    #checkout-modal {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(15,23,42,0.5); backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    #checkout-modal.open { opacity: 1; pointer-events: all; }
+    .modal-sheet {
+      width: 100%; background: #ffffff;
+      border-radius: 24px 24px 0 0;
+      padding: 20px 20px calc(var(--safe-bottom) + 24px);
+      transform: translateY(100%);
+      transition: transform .35s cubic-bezier(.32,1.25,.65,1);
+      box-shadow: 0 -4px 32px rgba(0,0,0,0.12);
+    }
+    #checkout-modal.open .modal-sheet { transform: translateY(0); }
+    .modal-handle { width: 36px; height: 4px; background: var(--border-s); border-radius: 2px; margin: 0 auto 20px; }
+    .modal-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; margin-bottom: 16px; color: var(--ink); }
+    .modal-line {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem;
+    }
+    .modal-line:last-of-type { border-bottom: none; }
+    .modal-line .lbl { color: var(--ink-3); }
+    .modal-line .val { font-weight: 700; font-family: 'Syne', sans-serif; color: var(--ink); }
+    .modal-line .val.total { color: var(--blue); font-size: 1.15rem; }
+
+    .pay-methods { display: flex; gap: 8px; margin: 14px 0; }
+    .pay-method {
+      flex: 1; padding: 12px 8px; border-radius: 12px; text-align: center;
+      border: 2px solid var(--border); cursor: pointer;
+      font-size: 0.78rem; font-weight: 700; color: var(--ink-3);
+      background: #f8fafc; transition: all .2s;
+    }
+    .pay-method.selected { border-color: var(--blue); color: var(--blue); background: #eff6ff; }
+    .pay-method .pay-icon { font-size: 1.3rem; margin-bottom: 4px; }
+
+    .confirm-btn {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff; border: none; border-radius: 14px;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.95rem;
+      cursor: pointer; margin-top: 12px;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.3);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .confirm-btn:active { transform: scale(0.97); }
+
+    /* RTL adjustments */
+    [dir="rtl"] .item-price { text-align: start; }
+    [dir="rtl"] .logo {
+      background: linear-gradient(225deg, #2563eb 30%, #3b82f6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    /* Numeric always LTR */
+    .num-ltr { direction: ltr; unicode-bidi: embed; }
+
+    /* ══════════════════════════════════════
+       PHASE 2 — INVENTORY STYLES
+    ══════════════════════════════════════ */
+
+    #inventory-screen { background: var(--surface); display: flex; flex-direction: column; overflow: hidden; }
+
+    .inv-header {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+      background: #ffffff;
+    }
+    .inv-header-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; color: var(--ink); }
+    .inv-header-sub { font-size: 0.7rem; color: var(--ink-3); margin-top: 2px; }
+
+    /* Alert chip */
+    #inv-alert-chip {
+      display: flex; align-items: center; gap: 5px;
+      background: #fef2f2; border: 1px solid #fecaca;
+      color: var(--red); padding: 5px 11px; border-radius: 20px;
+      font-size: 0.68rem; font-weight: 700;
+      animation: chip-pulse 2.5s ease infinite;
+    }
+    @keyframes chip-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.2); }
+      50%      { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+    }
+
+    /* Stats bar */
+    .inv-stats-bar {
+      flex-shrink: 0; display: flex; align-items: center;
+      background: #ffffff; margin: 10px 16px; border-radius: 14px;
+      border: 1px solid var(--border); padding: 12px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .inv-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .inv-stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: var(--ink); }
+    .inv-stat-val.warn { color: var(--red); }
+    .inv-stat-lbl { font-size: 0.62rem; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+    .inv-stat-divider { width: 1px; height: 32px; background: var(--border); }
+
+    #inv-list { flex: 1; overflow-y: auto; padding: 0 16px 12px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    #inv-list::-webkit-scrollbar { display: none; }
+
+    /* Product row */
+    .inv-row {
+      background: #ffffff; border-radius: 16px; margin-bottom: 10px;
+      border: 1px solid var(--border); overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      transition: border-color .3s ease, background .3s ease;
+    }
+    .inv-row.low-stock { background: #fef2f2; border-color: #fca5a5; }
+    .inv-row-main { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+
+    .inv-product-icon { width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; position: relative; }
+    .inv-product-icon .low-dot {
+      position: absolute; top: -3px; right: -3px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--red); border: 2px solid #ffffff;
+      display: none; animation: dot-pulse 1.5s ease infinite;
+    }
+    .inv-row.low-stock .inv-product-icon .low-dot { display: block; }
+    @keyframes dot-pulse {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50%      { transform: scale(1.3); opacity: .7; }
+    }
+
+    .inv-product-info { flex: 1; min-width: 0; }
+    .inv-product-name { font-weight: 700; font-size: 0.88rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inv-product-meta { font-size: 0.68rem; color: var(--ink-3); margin-top: 2px; }
+
+    .inv-stock-pill { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; margin-inline-start: 4px; }
+    .inv-stock-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; color: var(--ink); line-height: 1; }
+    .inv-stock-num.low { color: var(--red); }
+    .inv-stock-unit { font-size: 0.58rem; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+
+    .inv-edit-btn {
+      flex-shrink: 0; border: none; cursor: pointer;
+      background: #eff6ff; color: var(--blue);
+      width: 34px; height: 34px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, transform .15s;
+    }
+    .inv-edit-btn:active { background: #dbeafe; transform: scale(0.9); }
+    .inv-edit-btn svg { width: 15px; height: 15px; }
+
+    /* Low-stock warning bar */
+    .inv-reorder-bar { display: none; align-items: center; gap: 8px; padding: 8px 14px 10px; border-top: 1px solid #fecaca; }
+    .inv-row.low-stock .inv-reorder-bar { display: flex; }
+    .inv-reorder-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: #fef2f2; border: 1px solid #fca5a5;
+      color: var(--red); font-size: 0.65rem; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+    }
+    .inv-reorder-badge svg { width: 10px; height: 10px; flex-shrink: 0; }
+
+    /* Edit Stock Modal */
+    #edit-stock-modal {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(15,23,42,0.5); backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    #edit-stock-modal.open { opacity: 1; pointer-events: all; }
+    #edit-stock-modal .modal-sheet { transform: translateY(100%); }
+    #edit-stock-modal.open .modal-sheet { transform: translateY(0); }
+
+    .es-adj-btn {
+      padding: 8px 12px; border-radius: 10px; border: none; cursor: pointer;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem;
+      background: #f1f5f9; color: var(--ink-3);
+      transition: background .15s, transform .15s;
+    }
+    .es-adj-btn:active { transform: scale(0.9); }
+    .es-adj-plus { background: #eff6ff; color: var(--blue); }
+    #es-exact-input:focus { border-color: var(--blue) !important; }
+
+    /* ══════════════════════════════════════
+       PHASE 3 — PURCHASE ORDERS STYLES
+    ══════════════════════════════════════ */
+
+    #purchases-screen { background: var(--surface); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+    .po-header {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+      background: #ffffff;
+    }
+    .po-header-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; color: var(--ink); }
+    .po-header-sub { font-size: 0.7rem; color: var(--ink-3); margin-top: 2px; }
+
+    #po-pending-chip {
+      display: flex; align-items: center; gap: 5px;
+      background: #fffbeb; border: 1px solid #fcd34d;
+      color: #92400e; padding: 5px 11px; border-radius: 20px;
+      font-size: 0.68rem; font-weight: 700;
+    }
+
+    .po-stats-bar {
+      flex-shrink: 0; display: flex; align-items: center;
+      background: #ffffff; margin: 10px 16px; border-radius: 14px;
+      border: 1px solid var(--border); padding: 12px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .po-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .po-stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: var(--ink); }
+    .po-stat-lbl { font-size: 0.62rem; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+    .po-stat-divider { width: 1px; height: 32px; background: var(--border); }
+
+    #po-list { flex: 1; overflow-y: auto; padding: 0 16px 80px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    #po-list::-webkit-scrollbar { display: none; }
+
+    .po-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px 20px; color: var(--ink-4); text-align: center; }
+    .po-empty svg { width: 44px; height: 44px; opacity: .35; }
+    .po-empty p { font-size: 0.8rem; font-weight: 600; max-width: 220px; line-height: 1.5; }
+
+    .po-row {
+      background: #ffffff; border-radius: 16px; margin-bottom: 10px;
+      border: 1px solid var(--border); overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      cursor: pointer; transition: border-color .2s, box-shadow .2s;
+      animation: item-in .3s cubic-bezier(.34,1.56,.64,1);
+    }
+    .po-row:active { background: #f8fafc; box-shadow: none; }
+    .po-row-main { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+
+    .po-supplier-avatar { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; color: #ffffff; }
+    .po-row-info { flex: 1; min-width: 0; }
+    .po-row-num { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.88rem; color: var(--ink); }
+    .po-row-meta { font-size: 0.68rem; color: var(--ink-3); margin-top: 2px; }
+    .po-row-right { flex-shrink: 0; text-align: end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .po-row-total { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.9rem; color: var(--ink); }
+
+    /* Status badges */
+    .po-status-badge { font-size: 0.6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
+    .po-status-badge.pending  { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+    .po-status-badge.received { background: #f0fdf4; color: #065f46; border: 1px solid #86efac; }
+    .po-status-badge.canceled { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    /* FAB */
+    .po-fab {
+      position: absolute; bottom: 16px; right: 16px;
+      display: flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff; border: none; border-radius: 20px;
+      padding: 13px 20px;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.88rem;
+      box-shadow: 0 6px 20px rgba(37,99,235,0.4);
+      cursor: pointer; transition: transform .15s, box-shadow .15s; z-index: 10;
+    }
+    .po-fab:active { transform: scale(0.95); box-shadow: 0 3px 10px rgba(37,99,235,0.25); }
+    [dir="rtl"] .po-fab { right: auto; left: 16px; }
+
+    /* Generate PO button */
+    .inv-gen-po-btn {
+      display: flex; align-items: center; gap: 5px;
+      background: #fffbeb; border: 1px solid #fcd34d;
+      color: #92400e; font-size: 0.65rem; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px; cursor: pointer;
+      white-space: nowrap; transition: background .15s; flex-shrink: 0;
+    }
+    .inv-gen-po-btn:active { background: #fef3c7; }
+
+    /* PO Modals */
+    .po-modal-sheet { max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .po-modal-sheet::-webkit-scrollbar { display: none; }
+
+    #new-po-modal {
+      position: fixed; inset: 0; z-index: 400;
+      background: rgba(15,23,42,0.5); backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    #new-po-modal.open { opacity: 1; pointer-events: all; }
+    #new-po-modal .modal-sheet { transform: translateY(100%); }
+    #new-po-modal.open .modal-sheet { transform: translateY(0); }
+
+    #po-detail-modal {
+      position: fixed; inset: 0; z-index: 400;
+      background: rgba(15,23,42,0.5); backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    #po-detail-modal.open { opacity: 1; pointer-events: all; }
+    #po-detail-modal .modal-sheet { transform: translateY(100%); }
+    #po-detail-modal.open .modal-sheet { transform: translateY(0); }
+
+    /* Supplier card in New PO modal */
+    .npo-supplier-card-inner { display: flex; align-items: center; gap: 12px; background: #f8fafc; border-radius: 12px; padding: 10px 14px; border: 1px solid var(--border); }
+    .npo-supplier-avatar { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; color: #ffffff; }
+    .npo-supplier-name { font-weight: 700; font-size: 0.85rem; color: var(--ink); }
+    .npo-supplier-meta { font-size: 0.68rem; color: var(--ink-3); margin-top: 2px; }
+
+    .npo-field-group { margin-bottom: 12px; }
+    .npo-label { font-size: 0.72rem; font-weight: 700; color: var(--ink-3); margin-bottom: 5px; display: block; }
+
+    .npo-select-wrap { position: relative; }
+    .npo-select {
+      width: 100%; background: #f8fafc; border: 1px solid var(--border-s);
+      border-radius: 10px; padding: 11px 36px 11px 14px; color: var(--ink);
+      font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 600;
+      outline: none; appearance: none; -webkit-appearance: none; cursor: pointer;
+    }
+    .npo-select:focus { border-color: var(--blue); }
+    .npo-select-arrow { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); width: 16px; height: 16px; color: var(--ink-3); pointer-events: none; }
+    [dir="rtl"] .npo-select { padding: 11px 14px 11px 36px; }
+    [dir="rtl"] .npo-select-arrow { right: auto; left: 12px; }
+
+    .npo-textarea {
+      width: 100%; background: #f8fafc; border: 1px solid var(--border-s);
+      border-radius: 10px; padding: 10px 14px; color: var(--ink);
+      font-family: 'Syne', sans-serif; font-size: 0.85rem;
+      outline: none; resize: none;
+    }
+    .npo-textarea:focus { border-color: var(--blue); }
+
+    .npo-add-item-btn {
+      font-size: 0.72rem; font-weight: 700; color: var(--blue);
+      background: #eff6ff; border: 1px solid #bfdbfe;
+      padding: 5px 12px; border-radius: 10px; cursor: pointer;
+    }
+
+    .npo-item-row { display: flex; align-items: center; gap: 10px; background: #f8fafc; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--border); }
+    .npo-item-icon { width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .npo-item-name { flex: 1; font-size: 0.82rem; font-weight: 700; color: var(--ink); }
+    .npo-item-qty-wrap { display: flex; align-items: center; gap: 6px; }
+    .npo-qty-btn { width: 26px; height: 26px; border-radius: 7px; border: none; cursor: pointer; font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: transform .12s; }
+    .npo-qty-btn:active { transform: scale(0.85); }
+    .npo-qty-minus { background: #f1f5f9; color: var(--ink-3); }
+    .npo-qty-plus  { background: #eff6ff; color: var(--blue); }
+    .npo-qty-val   { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.88rem; min-width: 20px; text-align: center; color: var(--ink); }
+    .npo-item-price { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; color: var(--blue); min-width: 52px; text-align: end; }
+    .npo-item-remove { background: none; border: none; color: var(--ink-4); cursor: pointer; padding: 2px; font-size: 1rem; flex-shrink: 0; }
+
+    .npo-picker-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; }
+    .npo-picker-row:last-child { border-bottom: none; }
+    .npo-picker-row:active { background: #f8fafc; }
+
+    .pod-item-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .pod-item-row:last-child { border-bottom: none; }
+
+    .pod-action-btn { flex: 1; padding: 11px 8px; border-radius: 12px; border: none; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.78rem; transition: transform .15s, opacity .15s; }
+    .pod-action-btn:active { transform: scale(0.95); }
+    .pod-btn-receive { background: #f0fdf4; color: #065f46; }
+    .pod-btn-cancel  { background: #fef2f2; color: #991b1b; }
+
+    /* ══════════════════════════════════════
+       PHASE 4 — TEAM & SETTINGS STYLES
+    ══════════════════════════════════════ */
+
+    #team-screen { background: var(--surface); display: flex; flex-direction: column; overflow: hidden; }
+
+    .team-header {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+      background: #ffffff;
+    }
+    .team-header-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; color: var(--ink); }
+    .team-header-sub { font-size: 0.7rem; color: var(--ink-3); margin-top: 2px; }
+    .team-add-btn {
+      display: flex; align-items: center; gap: 5px;
+      background: #eff6ff; border: 1px solid #bfdbfe;
+      color: var(--blue); font-size: 0.72rem; font-weight: 700;
+      padding: 6px 12px; border-radius: 10px; cursor: pointer;
+    }
+
+    .team-stats-bar { flex-shrink: 0; display: flex; align-items: center; background: #ffffff; margin: 10px 16px; border-radius: 14px; border: 1px solid var(--border); padding: 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .team-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .team-stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: var(--ink); }
+    .team-stat-lbl { font-size: 0.62rem; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+    .team-stat-divider { width: 1px; height: 32px; background: var(--border); }
+
+    #team-active-banner {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+      margin: 0 16px 10px; padding: 10px 14px;
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px;
+    }
+
+    #team-list { flex: 1; overflow-y: auto; padding: 0 16px 12px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    #team-list::-webkit-scrollbar { display: none; }
+
+    .staff-row { background: #ffffff; border-radius: 16px; margin-bottom: 8px; border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); animation: item-in .3s cubic-bezier(.34,1.56,.64,1); }
+    .staff-row.active-row { border-color: #93c5fd; background: #eff6ff; }
+
+    .staff-avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; color: #ffffff; }
+    .staff-info { flex: 1; min-width: 0; }
+    .staff-name { font-weight: 700; font-size: 0.88rem; color: var(--ink); }
+    .staff-meta { font-size: 0.68rem; color: var(--ink-3); margin-top: 2px; }
+    .staff-sales-badge { font-size: 0.62rem; font-weight: 700; color: var(--blue); background: #eff6ff; padding: 2px 8px; border-radius: 8px; font-family: 'Syne', sans-serif; }
+    .staff-switch-btn { flex-shrink: 0; border: none; cursor: pointer; background: #f1f5f9; color: var(--ink-3); width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; transition: background .15s, color .15s; }
+    .staff-switch-btn.active { background: #eff6ff; color: var(--blue); }
+    .staff-switch-btn:active { transform: scale(0.9); }
+
+    .staff-role-badge { font-size: 0.58rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-top: 3px; }
+    .role-manager     { background: #fffbeb; color: #92400e; }
+    .role-pharmacist  { background: #f0fdf4; color: #065f46; }
+    .role-cashier     { background: #eff6ff; color: #1e40af; }
+    .role-pharmacist_assist { background: #faf5ff; color: #6b21a8; }
+
+    #add-staff-modal { position: fixed; inset: 0; z-index: 400; background: rgba(15,23,42,0.5); backdrop-filter: blur(6px); display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+    #add-staff-modal.open { opacity: 1; pointer-events: all; }
+    #add-staff-modal .modal-sheet { transform: translateY(100%); }
+    #add-staff-modal.open .modal-sheet { transform: translateY(0); }
+
+    #staff-switcher-modal { position: fixed; inset: 0; z-index: 400; background: rgba(15,23,42,0.5); backdrop-filter: blur(6px); display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+    #staff-switcher-modal.open { opacity: 1; pointer-events: all; }
+    #staff-switcher-modal .modal-sheet { transform: translateY(100%); }
+    #staff-switcher-modal.open .modal-sheet { transform: translateY(0); }
+
+    .ss-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; }
+    .ss-row:last-child { border-bottom: none; }
+    .ss-row:active { background: #f8fafc; }
+    .ss-row.ss-active { background: #eff6ff; }
+    .ss-check { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.7rem; background: #eff6ff; color: var(--blue); }
+    .ss-check.empty { background: #f1f5f9; color: transparent; }
+
+    /* ── Settings Screen ── */
+    #settings-screen { background: var(--surface); display: flex; flex-direction: column; overflow: hidden; }
+    #settings-scroll { flex: 1; overflow-y: auto; padding: 14px 16px 24px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    #settings-scroll::-webkit-scrollbar { display: none; }
+
+    .settings-section-title { font-size: 0.65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); padding: 0 2px; margin-bottom: 8px; margin-top: 4px; }
+
+    .settings-plan-card {
+      background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+      border: none; border-radius: 16px;
+      padding: 14px 16px; margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .settings-plan-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .settings-plan-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.95rem; color: #ffffff; }
+    .settings-plan-status { font-size: 0.68rem; color: #93c5fd; margin-top: 2px; }
+    .settings-plan-badge { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.65rem; letter-spacing: .12em; color: #1e3a8a; background: #ffffff; padding: 4px 10px; border-radius: 8px; }
+
+    .settings-card { background: #ffffff; border-radius: 16px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--border); gap: 12px; }
+    .settings-row-label { font-size: 0.75rem; color: var(--ink-3); font-weight: 600; flex-shrink: 0; }
+    .settings-row-val   { font-size: 0.78rem; font-weight: 700; color: var(--ink); }
+    .settings-row-title { font-size: 0.85rem; font-weight: 700; color: var(--ink); }
+    .settings-row-sub   { font-size: 0.68rem; color: var(--ink-3); margin-top: 2px; }
+
+    /* Toggle switch */
+    .toggle-switch { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 26px; transition: background .25s; }
+    .toggle-slider:before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: transform .25s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    input:checked + .toggle-slider { background: var(--blue); }
+    input:checked + .toggle-slider:before { transform: translateX(18px); }
+
+    /* Active user chip */
+    #active-user-chip { transition: border-color .2s, box-shadow .2s; }
+    #active-user-chip:active { opacity: .8; }
+
+    /* HTTPS warning */
+    #https-warning { background: #fef2f2; color: #991b1b; border-bottom: 1px solid #fca5a5; }
+
+    /* ══════════════════════════════════════
+       PO BARCODE SCANNER (Phase 3+)
+    ══════════════════════════════════════ */
+
+    /* Barcode input row */
+    .npo-barcode-row {
+      display: flex; gap: 8px; align-items: stretch;
+    }
+    .npo-barcode-input {
+      flex: 1; background: #ffffff; border: 1.5px solid var(--border-s);
+      border-radius: 10px; padding: 10px 14px; color: var(--ink);
+      font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 600;
+      outline: none; min-width: 0;
+    }
+    .npo-barcode-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .npo-barcode-input::placeholder { color: var(--ink-4); font-weight: 400; }
+
+    /* Scan button */
+    .npo-scan-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--blue); color: #ffffff;
+      border: none; border-radius: 10px;
+      padding: 10px 14px; cursor: pointer;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem;
+      white-space: nowrap; flex-shrink: 0;
+      transition: background .15s, transform .15s, box-shadow .15s;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+    }
+    .npo-scan-btn:active { transform: scale(0.96); background: var(--blue-d); }
+    .npo-scan-btn.scanning {
+      background: var(--red); box-shadow: 0 2px 8px rgba(239,68,68,0.25);
+    }
+
+    /* PO camera reader card */
+    #npo-reader-card {
+      border-radius: 14px; overflow: hidden;
+      border: 1.5px solid var(--border-s);
+      background: #f1f5f9; position: relative;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    #npo-reader {
+      width: 100%; min-height: 180px; background: #f1f5f9; position: relative;
+    }
+    #npo-reader video {
+      object-fit: cover !important; border-radius: 0 !important;
+      width: 100% !important; height: 100% !important;
+      max-height: 200px !important; display: block !important;
+      -webkit-playsinline: true;
+    }
+    #npo-reader img { display: none !important; }
+    #npo-reader__scan_region { border-radius: 0 !important; }
+    #npo-reader__scan_type_change_anchor { display: none !important; }
+    #npo-reader__dashboard_section_swaplink { display: none !important; }
+    #npo-reader__status_span {
+      background: #eff6ff !important; color: var(--blue) !important;
+      font-family: 'Syne', sans-serif !important; font-size: 0.72rem !important;
+      border-radius: 6px !important;
+    }
+    #npo-reader__dashboard { background: #f8fafc !important; padding: 6px 10px !important; }
+    #npo-reader__dashboard_section_csr button,
+    #npo-reader__dashboard_section_fsr button {
+      background: var(--blue) !important; color: #ffffff !important;
+      border: none !important; border-radius: 8px !important;
+      font-family: 'Syne', sans-serif !important; font-weight: 700 !important;
+      padding: 6px 16px !important; font-size: 0.78rem !important; cursor: pointer !important;
+    }
+
+    /* Corner overlay reused inside PO scanner */
+    .npo-scan-overlay {
+      position: absolute; inset: 0; pointer-events: none; z-index: 10;
+    }
+
+    /* ══════════════════════════════════════
+       ITEM INTAKE MODAL — batch detail form
+    ══════════════════════════════════════ */
+
+    #item-intake-modal {
+      position: fixed; inset: 0; z-index: 600;
+      background: rgba(15,23,42,0.55); backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    #item-intake-modal.open { opacity: 1; pointer-events: all; }
+    #item-intake-modal .modal-sheet { transform: translateY(100%); }
+    #item-intake-modal.open .modal-sheet { transform: translateY(0); }
+
+    .intake-sheet {
+      max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .intake-sheet::-webkit-scrollbar { display: none; }
+
+    /* 2-column grid for fields */
+    .iim-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 4px;
+    }
+    .iim-field { display: flex; flex-direction: column; gap: 4px; }
+    .iim-full  { grid-column: 1 / -1; }
+
+    .iim-label {
+      font-size: 0.68rem; font-weight: 700;
+      color: var(--ink-3); letter-spacing: .02em;
+    }
+    .iim-required { color: var(--red); }
+
+    .iim-input {
+      background: #ffffff; border: 1.5px solid var(--border-s);
+      border-radius: 10px; padding: 10px 12px;
+      color: var(--ink); font-family: 'Syne', sans-serif;
+      font-size: 0.88rem; font-weight: 600; outline: none; width: 100%;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .iim-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+    .iim-input.error { border-color: var(--red); }
+    .iim-num { font-family: 'Syne', sans-serif; }
+
+    /* Price wrapper with IQD suffix */
+    .iim-price-wrap { position: relative; }
+    .iim-price-wrap .iim-input { padding-inline-end: 40px; }
+    .iim-currency {
+      position: absolute; top: 50%; right: 12px;
+      transform: translateY(-50%);
+      font-size: 0.68rem; font-weight: 700; color: var(--ink-3);
+      pointer-events: none;
+    }
+    [dir="rtl"] .iim-currency { right: auto; left: 12px; }
+    [dir="rtl"] .iim-price-wrap .iim-input { padding-inline-end: 12px; padding-inline-start: 40px; }
+
+    /* Updated cart row for batch details */
+    .npo-item-row-detail {
+      font-size: 0.64rem; color: var(--ink-3);
+      margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .npo-item-row-detail .detail-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: #f1f5f9; border-radius: 6px; padding: 1px 6px;
+      font-weight: 600;
+    }
+    .npo-item-row-detail .detail-chip.exp-warn {
+      background: #fef2f2; color: var(--red);
+    }
+  </style>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- ══ HTTPS WARNING (hidden on secure origins) ══ -->
+  <div id="https-warning" style="display:none;flex-shrink:0;background:#ff6b6b;color:#0a0f1e;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;text-align:center;padding:8px 16px;line-height:1.5;z-index:100;">
+    ⚠️ Camera requires HTTPS. Open this page via GitHub Pages or another HTTPS URL — not a local file or http:// link.
+  </div>
+
+  <!-- ══ TOPBAR ══ -->
+  <header id="topbar">
+    <div class="logo" id="app-logo">PharmaPOS</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div id="hub-badge" style="font-size:.65rem;font-weight:700;color:#8899bb;background:#1a2235;padding:3px 10px;border-radius:10px;" class="num-ltr">Baghdad Hub</div>
+      <!-- Active user chip — tapping opens staff-switcher -->
+      <button id="active-user-chip" onclick="openStaffSwitcher()" style="display:flex;align-items:center;gap:6px;background:#1a2235;border:1px solid rgba(0,212,170,0.2);border-radius:20px;padding:4px 10px 4px 6px;cursor:pointer;outline:none;">
+        <div id="auc-avatar" style="width:22px;height:22px;border-radius:50%;background:#00a885;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:0.65rem;color:#0a0f1e;flex-shrink:0;"></div>
+        <span id="auc-name" style="font-size:0.68rem;font-weight:700;color:#e8f0fe;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══ SCREENS ══ -->
+  <div id="screen-wrap">
+
+    <!-- POS Screen -->
+    <div class="screen active" id="pos-screen">
+
+      <!-- Scanner Section -->
+      <div id="scanner-section">
+        <div id="scanner-card" class="idle">
+          <!-- Tap-to-scan placeholder -->
+          <div id="tap-placeholder" onclick="startScanner()">
+            <div class="scan-icon-ring">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#00d4aa" stroke-width="2" stroke-linecap="round" width="32" height="32">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+                <rect x="7" y="7" width="3" height="3" rx="1" fill="#00d4aa" stroke="none"/>
+                <rect x="14" y="7" width="3" height="3" rx="1" fill="#00d4aa" stroke="none"/>
+                <rect x="7" y="14" width="3" height="3" rx="1" fill="#00d4aa" stroke="none"/>
+                <rect x="14" y="14" width="3" height="3" rx="1" fill="#2d3f61" stroke="none"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem;text-align:center;" id="tap-label">Tap to Scan</div>
+              <div style="font-size:.7rem;color:#8899bb;text-align:center;margin-top:2px;" id="tap-sub">Point camera at barcode or QR</div>
+            </div>
+          </div>
+
+          <!-- html5-qrcode mounts here -->
+          <div id="reader" class="hidden"></div>
+
+          <!-- Corner overlay + scan line (shown when active) -->
+          <div class="scan-overlay" id="scan-overlay" style="display:none;">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+            <div class="scan-line"></div>
+          </div>
+        </div>
+
+        <!-- Label bar below scanner -->
+        <div class="scanner-label">
+          <div class="scan-badge" id="scanner-status-badge">READY</div>
+          <button id="stop-scan-btn" onclick="stopScanner()" style="display:none;font-size:.7rem;font-weight:700;color:#ff6b6b;background:rgba(255,107,107,.1);border:none;padding:4px 12px;border-radius:10px;cursor:pointer;" id-label="stop-label">■ Stop</button>
+          <div class="scan-count-badge num-ltr" id="scan-count-badge">0 items scanned</div>
+        </div>
+      </div>
+
+      <!-- Cart Section -->
+      <div id="cart-section">
+        <div class="cart-header">
+          <div class="cart-title" id="cart-title-label">Invoice</div>
+          <button class="clear-btn" onclick="clearCart()" id="clear-btn">Clear All</button>
+        </div>
+
+        <div id="empty-cart">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+          </svg>
+          <p id="empty-label">Scan a product to start the invoice</p>
+        </div>
+
+        <div id="cart-items"></div>
+      </div>
+
+      <!-- Checkout Footer -->
+      <div id="checkout-footer">
+        <div class="totals-row">
+          <div class="totals-label">
+            <span id="total-label">Total</span>
+            <span id="total-sub">IQD · incl. VAT</span>
+          </div>
+          <div>
+            <span class="totals-amount num-ltr" id="total-display">0</span>
+            <span class="totals-currency">IQD</span>
+          </div>
+        </div>
+        <button class="checkout-btn" onclick="openCheckout()" id="checkout-btn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="checkout-label">Checkout</span>
+        </button>
+      </div>
+    </div><!-- /pos-screen -->
+
+    <!-- ══ INVENTORY SCREEN (Phase 2) ══ -->
+    <div class="screen" id="inventory-screen">
+
+      <!-- Inventory Header -->
+      <div class="inv-header">
+        <div>
+          <div class="inv-header-title" id="inv-screen-title">Inventory</div>
+          <div class="inv-header-sub" id="inv-screen-sub">Stock levels &amp; re-order</div>
+        </div>
+        <!-- Low-stock alert chip — shown when any product is critical -->
+        <div id="inv-alert-chip" style="display:none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span id="inv-alert-text">Low stock</span>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="inv-stats-bar">
+        <div class="inv-stat">
+          <div class="inv-stat-val num-ltr" id="stat-total-skus">0</div>
+          <div class="inv-stat-lbl" id="stat-skus-lbl">SKUs</div>
+        </div>
+        <div class="inv-stat-divider"></div>
+        <div class="inv-stat">
+          <div class="inv-stat-val num-ltr" id="stat-total-units">0</div>
+          <div class="inv-stat-lbl" id="stat-units-lbl">Total Units</div>
+        </div>
+        <div class="inv-stat-divider"></div>
+        <div class="inv-stat">
+          <div class="inv-stat-val warn num-ltr" id="stat-low-count">0</div>
+          <div class="inv-stat-lbl" id="stat-low-lbl">Low Stock</div>
+        </div>
+      </div>
+
+      <!-- Product list -->
+      <div id="inv-list"></div>
+
+    </div><!-- /inventory-screen -->
+
+    <!-- ══ PURCHASES SCREEN (Phase 3) ══ -->
+    <div class="screen" id="purchases-screen">
+
+      <!-- Purchases Header -->
+      <div class="po-header">
+        <div>
+          <div class="po-header-title" id="po-screen-title">Purchase Orders</div>
+          <div class="po-header-sub" id="po-screen-sub">Supplier orders &amp; history</div>
+        </div>
+        <div id="po-pending-chip" style="display:none;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+          <span id="po-pending-text">0 pending</span>
+        </div>
+      </div>
+
+      <!-- PO Stats bar -->
+      <div class="po-stats-bar">
+        <div class="po-stat">
+          <div class="po-stat-val num-ltr" id="po-stat-total">0</div>
+          <div class="po-stat-lbl" id="po-stat-total-lbl">Total POs</div>
+        </div>
+        <div class="po-stat-divider"></div>
+        <div class="po-stat">
+          <div class="po-stat-val num-ltr" id="po-stat-pending">0</div>
+          <div class="po-stat-lbl" id="po-stat-pending-lbl">Pending</div>
+        </div>
+        <div class="po-stat-divider"></div>
+        <div class="po-stat">
+          <div class="po-stat-val num-ltr" id="po-stat-value">0</div>
+          <div class="po-stat-lbl" id="po-stat-value-lbl">Total IQD</div>
+        </div>
+      </div>
+
+      <!-- PO List -->
+      <div id="po-list"></div>
+
+      <!-- FAB: Create New PO -->
+      <button class="po-fab" onclick="openNewPO(null)" id="po-fab-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="22" height="22">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span id="po-fab-label">New PO</span>
+      </button>
+
+    </div><!-- /purchases-screen -->
+
+    <!-- ══ TEAM SCREEN (Phase 4) ══ -->
+    <div class="screen" id="team-screen">
+
+      <div class="team-header">
+        <div>
+          <div class="team-header-title" id="team-screen-title">Team</div>
+          <div class="team-header-sub" id="team-screen-sub">Staff &amp; access control</div>
+        </div>
+        <button class="team-add-btn" onclick="openAddStaff()" id="team-add-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span id="team-add-lbl">Add Staff</span>
+        </button>
+      </div>
+
+      <!-- Team stats -->
+      <div class="team-stats-bar">
+        <div class="team-stat">
+          <div class="team-stat-val num-ltr" id="team-stat-total">0</div>
+          <div class="team-stat-lbl" id="team-stat-total-lbl">Staff</div>
+        </div>
+        <div class="team-stat-divider"></div>
+        <div class="team-stat">
+          <div class="team-stat-val num-ltr" id="team-stat-active">0</div>
+          <div class="team-stat-lbl" id="team-stat-active-lbl">Active</div>
+        </div>
+        <div class="team-stat-divider"></div>
+        <div class="team-stat">
+          <div class="team-stat-val num-ltr" id="team-stat-sales">0</div>
+          <div class="team-stat-lbl" id="team-stat-sales-lbl">Sales Today</div>
+        </div>
+      </div>
+
+      <!-- Active session banner -->
+      <div id="team-active-banner">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="tab-active-avatar" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:0.9rem;color:#0a0f1e;flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:0.8rem;font-weight:700;" id="tab-active-name"></div>
+            <div style="font-size:0.65rem;color:#8899bb;" id="tab-active-role"></div>
+          </div>
+        </div>
+        <div style="font-size:0.65rem;color:#00d4aa;font-weight:700;" id="tab-active-status-lbl">● Active Session</div>
+      </div>
+
+      <!-- Staff list -->
+      <div id="team-list"></div>
+
+    </div><!-- /team-screen -->
+
+    <!-- ══ SETTINGS SCREEN (Phase 4) ══ -->
+    <div class="screen" id="settings-screen">
+      <div id="settings-scroll">
+
+        <div class="settings-section-title" id="set-section-plan">Subscription</div>
+
+        <!-- SaaS plan card -->
+        <div class="settings-plan-card">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="settings-plan-icon">⭐</div>
+            <div>
+              <div class="settings-plan-name" id="set-plan-name">Premium Tier</div>
+              <div class="settings-plan-status" id="set-plan-status">● Active · Renews Jan 2027</div>
+            </div>
+          </div>
+          <div class="settings-plan-badge" id="set-plan-badge">PRO</div>
+        </div>
+
+        <!-- Pharmacy info row -->
+        <div class="settings-card" style="margin-bottom:16px;">
+          <div class="settings-row">
+            <span class="settings-row-label" id="set-pharmacy-lbl">Pharmacy</span>
+            <span class="settings-row-val">Al-Amal Pharmacy</span>
+          </div>
+          <div class="settings-row" style="border-bottom:none;">
+            <span class="settings-row-label" id="set-hub-lbl">Hub</span>
+            <span class="settings-row-val num-ltr">Baghdad · Branch 1</span>
+          </div>
+        </div>
+
+        <div class="settings-section-title" id="set-section-payment">Payment Methods</div>
+        <div class="settings-card" style="margin-bottom:16px;">
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-title" id="set-cash-title">Cash</div>
+              <div class="settings-row-sub" id="set-cash-sub">Accept physical banknotes</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-cash" checked onchange="updatePaymentSetting('cash', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-title" id="set-qi-title">Qi Card</div>
+              <div class="settings-row-sub" id="set-qi-sub">Iraqi electronic payment card</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-qi" checked onchange="updatePaymentSetting('qi', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row" style="border-bottom:none;">
+            <div>
+              <div class="settings-row-title" id="set-transfer-title">Bank Transfer</div>
+              <div class="settings-row-sub" id="set-transfer-sub">Direct bank or mobile transfer</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-transfer" checked onchange="updatePaymentSetting('transfer', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section-title" id="set-section-lang">Language</div>
+        <div class="settings-card" style="margin-bottom:16px;">
+          <div class="settings-row" style="border-bottom:none;">
+            <div>
+              <div class="settings-row-title" id="set-lang-title">App Language</div>
+              <div class="settings-row-sub" id="set-lang-sub">Interface and content language</div>
+            </div>
+            <div class="lang-pill">
+              <button class="lang-btn active" onclick="setLang('en')" id="btn-en">EN</button>
+              <button class="lang-btn"        onclick="setLang('ar')" id="btn-ar">ع</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section-title" id="set-section-app">App</div>
+        <div class="settings-card" style="margin-bottom:24px;">
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-title" id="set-version-title">Version</div>
+              <div class="settings-row-sub">PharmaPOS v4.0 · Phase 4</div>
+            </div>
+            <span class="settings-row-val num-ltr">4.0.0</span>
+          </div>
+          <div class="settings-row" style="border-bottom:none;">
+            <div>
+              <div class="settings-row-title" id="set-firebase-title">Firebase Sync</div>
+              <div class="settings-row-sub" id="set-firebase-sub">Cloud backend connection</div>
+            </div>
+            <span style="font-size:0.7rem;font-weight:700;color:#ffd54f;" id="set-firebase-status">Phase 5</span>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /settings-screen -->
+
+  </div><!-- /screen-wrap -->
+
+  <!-- ══ BOTTOM NAV ══ -->
+  <nav id="bottom-nav">
+    <button class="nav-item active" onclick="switchScreen('pos',this)" data-screen="pos">
+      <div class="nav-dot"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      <span class="nav-label" id="nav-pos">POS</span>
+    </button>
+    <button class="nav-item" onclick="switchScreen('inventory',this)" data-screen="inventory">
+      <div class="nav-dot"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+      </svg>
+      <span class="nav-label" id="nav-inv">Stock</span>
+    </button>
+    <button class="nav-item" onclick="switchScreen('purchases',this)" data-screen="purchases">
+      <div class="nav-dot"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+      </svg>
+      <span class="nav-label" id="nav-pur">Orders</span>
+    </button>
+    <button class="nav-item" onclick="switchScreen('team',this)" data-screen="team">
+      <div class="nav-dot"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+      </svg>
+      <span class="nav-label" id="nav-team">Team</span>
+    </button>
+    <button class="nav-item" onclick="switchScreen('settings',this)" data-screen="settings">
+      <div class="nav-dot"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+      <span class="nav-label" id="nav-set">Settings</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- ══ TOAST ══ -->
+<div id="toast">
+  <div class="toast-dot"></div>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- ══ CHECKOUT MODAL ══ -->
+<div id="checkout-modal" onclick="closeCheckoutOutside(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Confirm Payment</div>
+
+    <div class="modal-line">
+      <span class="lbl" id="modal-items-lbl">Items</span>
+      <span class="val num-ltr" id="modal-items-val">0</span>
+    </div>
+    <div class="modal-line">
+      <span class="lbl" id="modal-sub-lbl">Subtotal</span>
+      <span class="val num-ltr" id="modal-sub-val">0 IQD</span>
+    </div>
+    <div class="modal-line">
+      <span class="lbl" id="modal-vat-lbl">VAT (0%)</span>
+      <span class="val num-ltr">0 IQD</span>
+    </div>
+    <div class="modal-line">
+      <span class="lbl" id="modal-total-lbl" style="font-weight:700;color:#e8f0fe;">Total</span>
+      <span class="val total num-ltr" id="modal-total-val">0 IQD</span>
+    </div>
+
+    <div class="pay-methods">
+      <div class="pay-method selected" id="pay-cash" onclick="selectPayment('cash')">
+        <div class="pay-icon">💵</div>
+        <div id="pay-cash-lbl">Cash</div>
+      </div>
+      <div class="pay-method" id="pay-qi" onclick="selectPayment('qi')">
+        <div class="pay-icon">💳</div>
+        <div id="pay-qi-lbl">Qi Card</div>
+      </div>
+      <div class="pay-method" id="pay-transfer" onclick="selectPayment('transfer')">
+        <div class="pay-icon">📲</div>
+        <div id="pay-transfer-lbl">Transfer</div>
+      </div>
+    </div>
+
+    <button class="confirm-btn" onclick="confirmSale()" id="confirm-btn">
+      ✓ Confirm Sale
+    </button>
+    <button onclick="closeCheckout()" style="width:100%;padding:12px;background:transparent;border:none;color:#8899bb;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:4px;" id="cancel-lbl">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ EDIT STOCK MODAL ══ -->
+<div id="edit-stock-modal" onclick="closeEditStockOutside(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+
+    <!-- Product preview -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div id="es-icon" style="width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;"></div>
+      <div>
+        <div id="es-name" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;"></div>
+        <div id="es-barcode" class="num-ltr" style="font-size:0.7rem;color:#8899bb;margin-top:2px;"></div>
+      </div>
+    </div>
+
+    <div class="modal-title" id="es-modal-title">Edit Stock</div>
+
+    <!-- Current stock display -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:#1a2235;border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+      <span style="font-size:0.8rem;color:#8899bb;font-weight:600;" id="es-current-lbl">Current Stock</span>
+      <span id="es-current-val" class="num-ltr" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;"></span>
+    </div>
+
+    <!-- Adjustment row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;">
+      <div style="font-size:0.8rem;color:#8899bb;font-weight:600;flex-shrink:0;" id="es-adjust-lbl">Adjust by</div>
+      <div style="display:flex;align-items:center;gap:10px;flex:1;justify-content:flex-end;">
+        <button onclick="esAdjust(-10)" class="es-adj-btn">−10</button>
+        <button onclick="esAdjust(-1)"  class="es-adj-btn">−1</button>
+        <div id="es-delta-display" class="num-ltr" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;min-width:40px;text-align:center;color:#00d4aa;">+0</div>
+        <button onclick="esAdjust(+1)"  class="es-adj-btn es-adj-plus">+1</button>
+        <button onclick="esAdjust(+10)" class="es-adj-btn es-adj-plus">+10</button>
+      </div>
+    </div>
+
+    <!-- New total preview -->
+    <div id="es-new-total-row" style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:16px;">
+      <span style="font-size:0.82rem;font-weight:700;color:#e8f0fe;" id="es-new-total-lbl">New Total</span>
+      <span id="es-new-total-val" class="num-ltr" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:#00d4aa;"></span>
+    </div>
+
+    <!-- Set exact value field -->
+    <div style="margin-bottom:16px;">
+      <label style="font-size:0.75rem;color:#8899bb;font-weight:600;display:block;margin-bottom:6px;" id="es-set-exact-lbl">Or set exact value</label>
+      <input id="es-exact-input" type="number" min="0" inputmode="numeric" pattern="[0-9]*"
+        style="width:100%;background:#1a2235;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;color:#e8f0fe;font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;outline:none;"
+        oninput="esSetExact(this.value)" />
+    </div>
+
+    <button class="confirm-btn" onclick="confirmEditStock()" id="es-save-btn">✓ Save Stock</button>
+    <button onclick="closeEditStock()" style="width:100%;padding:12px;background:transparent;border:none;color:#8899bb;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:4px;" id="es-cancel-btn">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ NEW PO MODAL ══ -->
+<div id="new-po-modal" onclick="closeNewPOOutside(event)">
+  <div class="modal-sheet po-modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="npo-title">New Purchase Order</div>
+
+    <!-- Supplier selector -->
+    <div class="npo-field-group">
+      <label class="npo-label" id="npo-supplier-lbl">Supplier</label>
+      <div class="npo-select-wrap">
+        <select id="npo-supplier-select" class="npo-select" onchange="npoSupplierChanged()">
+          <option value="" id="npo-supplier-placeholder">— Select Supplier —</option>
+        </select>
+        <svg class="npo-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+
+    <!-- Supplier info card -->
+    <div id="npo-supplier-card" style="display:none;margin-bottom:12px;">
+      <div class="npo-supplier-card-inner">
+        <div class="npo-supplier-avatar" id="npo-s-avatar">B</div>
+        <div>
+          <div class="npo-supplier-name" id="npo-s-name"></div>
+          <div class="npo-supplier-meta" id="npo-s-meta"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:12px 0;"></div>
+
+    <!-- ── Barcode / scan entry ── -->
+    <div class="npo-field-group">
+      <label class="npo-label" id="npo-scan-lbl">Add by Barcode</label>
+      <div class="npo-barcode-row">
+        <input
+          id="npo-barcode-input"
+          type="text"
+          inputmode="numeric"
+          class="npo-barcode-input"
+          placeholder="Type or scan barcode…"
+          onkeydown="if(event.key==='Enter'){npoAddByBarcode(this.value);this.value='';}"
+        />
+        <button class="npo-scan-btn" id="npo-scan-btn" onclick="togglePOScanner()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+            <line x1="7" y1="12" x2="7" y2="12.01"/><line x1="12" y1="12" x2="12" y2="12.01"/><line x1="17" y1="12" x2="17" y2="12.01"/>
+          </svg>
+          <span id="npo-scan-btn-label">Scan</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- PO camera reader (hidden until scanner active) -->
+    <div id="npo-scanner-wrap" style="display:none;margin-bottom:12px;">
+      <div id="npo-reader-card">
+        <div id="npo-reader"></div>
+        <!-- Corner overlay -->
+        <div class="npo-scan-overlay">
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="corner bl"></div><div class="corner br"></div>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 2px 0;">
+        <span class="scan-badge" id="npo-scan-status-badge">SCANNING</span>
+        <button onclick="stopPOScanner()" style="font-size:0.7rem;font-weight:700;color:var(--red);background:#fef2f2;border:1px solid #fca5a5;padding:3px 10px;border-radius:8px;cursor:pointer;" id="npo-stop-btn">■ Stop</button>
+      </div>
+    </div>
+
+    <!-- Items header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="npo-label" id="npo-items-lbl">Order Items</div>
+      <button class="npo-add-item-btn" onclick="npoOpenAddProduct()" id="npo-add-item-btn">+ Add Item</button>
+    </div>
+    <div id="npo-items-list"></div>
+
+    <!-- Notes -->
+    <div class="npo-field-group" style="margin-top:8px;">
+      <label class="npo-label" id="npo-notes-lbl">Notes (optional)</label>
+      <textarea id="npo-notes" rows="2" class="npo-textarea" id="npo-notes-placeholder"></textarea>
+    </div>
+
+    <!-- Order total -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);margin-top:8px;">
+      <span style="font-weight:700;font-size:0.88rem;color:var(--ink);" id="npo-total-lbl">Order Total</span>
+      <span id="npo-total-val" class="num-ltr" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--blue);">0 IQD</span>
+    </div>
+
+    <button class="confirm-btn" onclick="submitNewPO()" id="npo-submit-btn">📋 Submit Purchase Order</button>
+    <button onclick="closeNewPO()" style="width:100%;padding:12px;background:transparent;border:none;color:var(--ink-3);font-size:.82rem;font-weight:600;cursor:pointer;margin-top:4px;" id="npo-cancel-btn">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ PO DETAIL MODAL ══ -->
+<div id="po-detail-modal" onclick="closePODetailOutside(event)">
+  <div class="modal-sheet po-modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="modal-title" style="margin-bottom:0;" id="pod-title">Order Details</div>
+      <div id="pod-status-badge" class="po-status-badge"></div>
+    </div>
+    <div class="modal-line"><span class="lbl" id="pod-num-lbl">PO Number</span><span class="val num-ltr" id="pod-num"></span></div>
+    <div class="modal-line"><span class="lbl" id="pod-supplier-lbl">Supplier</span><span class="val" id="pod-supplier"></span></div>
+    <div class="modal-line"><span class="lbl" id="pod-date-lbl">Date</span><span class="val num-ltr" id="pod-date"></span></div>
+    <div class="modal-line"><span class="lbl" id="pod-items-count-lbl">Items</span><span class="val num-ltr" id="pod-items-count"></span></div>
+    <div class="modal-line"><span class="lbl total-row-lbl" id="pod-total-lbl" style="font-weight:700;color:#e8f0fe;">Total</span><span class="val total num-ltr" id="pod-total"></span></div>
+    <div id="pod-items-breakdown" style="margin-top:12px;"></div>
+    <div id="pod-actions" style="display:flex;gap:8px;margin-top:14px;"></div>
+    <button onclick="closePODetail()" style="width:100%;padding:12px;background:transparent;border:none;color:#8899bb;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:6px;" id="pod-close-btn">Close</button>
+  </div>
+</div>
+
+<!-- ══ ADD PRODUCT TO PO PICKER ══ -->
+<div id="npo-product-picker" onclick="closeNpoPickerOutside(event)" style="position:fixed;inset:0;z-index:500;background:rgba(15,23,42,0.55);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .3s ease;">
+  <div class="modal-sheet" style="max-height:72vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="npo-picker-title">Add Product</div>
+    <div id="npo-picker-list"></div>
+    <button onclick="closeNpoPicker()" style="width:100%;padding:12px;background:transparent;border:none;color:var(--ink-3);font-size:.82rem;font-weight:600;cursor:pointer;margin-top:4px;" id="npo-picker-cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ ITEM INTAKE MODAL (PO batch details) ══ -->
+<div id="item-intake-modal" onclick="closeItemIntakeOutside(event)">
+  <div class="modal-sheet intake-sheet">
+    <div class="modal-handle"></div>
+
+    <!-- Product header (shown after lookup) -->
+    <div id="iim-product-header" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div id="iim-product-icon" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div id="iim-product-name" style="font-family:'Syne',sans-serif;font-weight:800;font-size:0.95rem;color:var(--ink);"></div>
+        <div id="iim-product-meta" style="font-size:0.68rem;color:var(--ink-3);margin-top:2px;"></div>
+      </div>
+    </div>
+
+    <div class="modal-title" id="iim-title">Item Details</div>
+
+    <!-- 2-col grid for compact layout -->
+    <div class="iim-grid">
+
+      <!-- Barcode -->
+      <div class="iim-field iim-full">
+        <label class="iim-label" id="iim-barcode-lbl">Barcode</label>
+        <input id="iim-barcode" type="text" class="iim-input" />
+      </div>
+
+      <!-- Company / Manufacturer -->
+      <div class="iim-field iim-full">
+        <label class="iim-label" id="iim-company-lbl">Company / Manufacturer</label>
+        <input id="iim-company" type="text" class="iim-input" />
+      </div>
+
+      <!-- QTY -->
+      <div class="iim-field">
+        <label class="iim-label" id="iim-qty-lbl">QTY <span class="iim-required">*</span></label>
+        <input id="iim-qty" type="number" inputmode="numeric" min="1" class="iim-input iim-num" />
+      </div>
+
+      <!-- Expiry Date -->
+      <div class="iim-field">
+        <label class="iim-label" id="iim-exp-lbl">EXP Date <span class="iim-required">*</span></label>
+        <input id="iim-exp" type="month" class="iim-input" />
+      </div>
+
+      <!-- Purchase Price -->
+      <div class="iim-field">
+        <label class="iim-label" id="iim-purchase-lbl">Purchase Price <span class="iim-required">*</span></label>
+        <div class="iim-price-wrap">
+          <input id="iim-purchase-price" type="number" inputmode="decimal" min="0" class="iim-input iim-num" />
+          <span class="iim-currency">IQD</span>
+        </div>
+      </div>
+
+      <!-- Selling Price -->
+      <div class="iim-field">
+        <label class="iim-label" id="iim-selling-lbl">Selling Price <span class="iim-required">*</span></label>
+        <div class="iim-price-wrap">
+          <input id="iim-selling-price" type="number" inputmode="decimal" min="0" class="iim-input iim-num" />
+          <span class="iim-currency">IQD</span>
+        </div>
+      </div>
+
+    </div><!-- /iim-grid -->
+
+    <!-- Line total preview -->
+    <div id="iim-line-total-row" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;margin-top:4px;border-top:1px solid var(--border);">
+      <span style="font-size:0.75rem;font-weight:600;color:var(--ink-3);" id="iim-line-total-lbl">Line Total</span>
+      <span id="iim-line-total-val" class="num-ltr" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--blue);">—</span>
+    </div>
+
+    <button class="confirm-btn" onclick="confirmItemIntake()" id="iim-confirm-btn">✓ Confirm Item</button>
+    <button onclick="closeItemIntake()" style="width:100%;padding:12px;background:transparent;border:none;color:var(--ink-3);font-size:.82rem;font-weight:600;cursor:pointer;margin-top:4px;" id="iim-cancel-btn">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ ADD STAFF MODAL (Phase 4) ══ -->
+<div id="add-staff-modal" onclick="closeAddStaffOutside(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="as-title">Add Staff Member</div>
+
+    <div class="npo-field-group">
+      <label class="npo-label" id="as-name-lbl">Full Name</label>
+      <input id="as-name-input" type="text" class="npo-textarea" style="padding:11px 14px;border-radius:10px;resize:none;" placeholder="e.g. Ahmed Al-Rashid" id="as-name-ph" />
+    </div>
+
+    <div class="npo-field-group">
+      <label class="npo-label" id="as-role-lbl">Role</label>
+      <div class="npo-select-wrap">
+        <select id="as-role-select" class="npo-select">
+          <option value="cashier"      id="as-role-cashier">Cashier</option>
+          <option value="pharmacist"   id="as-role-pharmacist">Lead Pharmacist</option>
+          <option value="manager"      id="as-role-manager">Store Manager</option>
+          <option value="pharmacist_assist" id="as-role-assist">Pharmacist Assistant</option>
+        </select>
+        <svg class="npo-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+
+    <div class="npo-field-group">
+      <label class="npo-label" id="as-pin-lbl">PIN Code (4 digits)</label>
+      <input id="as-pin-input" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]*"
+        class="npo-textarea" style="padding:11px 14px;border-radius:10px;resize:none;letter-spacing:0.3em;font-size:1.2rem;"
+        placeholder="••••" />
+    </div>
+
+    <div class="npo-field-group">
+      <label class="npo-label" id="as-hub-lbl">Hub Assignment</label>
+      <div class="npo-select-wrap">
+        <select id="as-hub-select" class="npo-select">
+          <option value="baghdad">Baghdad</option>
+          <option value="basra">Basra</option>
+          <option value="erbil">Erbil</option>
+        </select>
+        <svg class="npo-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+
+    <button class="confirm-btn" onclick="submitAddStaff()" id="as-save-btn">✓ Add Staff Member</button>
+    <button onclick="closeAddStaff()" style="width:100%;padding:12px;background:transparent;border:none;color:#8899bb;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:4px;" id="as-cancel-btn">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ STAFF SWITCHER MODAL (Phase 4) ══ -->
+<div id="staff-switcher-modal" onclick="closeStaffSwitcherOutside(event)">
+  <div class="modal-sheet" style="max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="ss-title">Switch Active User</div>
+    <div id="ss-staff-list"></div>
+    <button onclick="closeStaffSwitcher()" style="width:100%;padding:12px;background:transparent;border:none;color:#8899bb;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:4px;" id="ss-cancel-btn">Cancel</button>
+  </div>
+</div>
+
+<script>
+/* ── Product Database ── */
+// Each product has: id, name/nameAr, price, category, icon, color,
+// barcode (canonical), stock (live inventory count)
+const PRODUCTS_LIST = [
+  {
+    id: 'tymer',
+    name: 'Tymer 500mg',     nameAr: 'تايمر ٥٠٠ مجم',
+    price: 2500,             category: 'Analgesic',   categoryAr: 'مسكن ألم',
+    icon: '💊',              color: '#1e3a5f',
+    barcode: '6921168509256',
+    stock: 42,
+  },
+  {
+    id: 'arox',
+    name: 'Arox 250mg',      nameAr: 'أروكس ٢٥٠ مجم',
+    price: 4750,             category: 'Antibiotic',  categoryAr: 'مضاد حيوي',
+    icon: '🔵',              color: '#1a3a2a',
+    barcode: '4260288930106',
+    stock: 7,   // ← intentionally low to demo reorder alert
+  },
+  {
+    id: 'olopat',
+    name: 'Olopat UD',       nameAr: 'أوليبات يو دي',
+    price: 8500,             category: 'Eye Drop',    categoryAr: 'قطرة عين',
+    icon: '👁️',             color: '#2d1b4e',
+    barcode: '4550048014817',
+    stock: 5,   // ← intentionally low
+  },
+  {
+    id: 'hyfresh',
+    name: 'Hyfresh Eye Drops', nameAr: 'هايفريش قطرة عين',
+    price: 6200,               category: 'Eye Drop',  categoryAr: 'قطرة عين',
+    icon: '💧',                color: '#0f2d3a',
+    barcode: '8901234567890',
+    stock: 28,
+  },
+];
+
+// Barcode lookup map (both canonical EAN and short test codes)
+const PRODUCTS = {};
+PRODUCTS_LIST.forEach(p => {
+  PRODUCTS[p.barcode] = p;
+});
+// Short test codes for dev
+PRODUCTS['111'] = PRODUCTS_LIST[0];
+PRODUCTS['222'] = PRODUCTS_LIST[1];
+PRODUCTS['333'] = PRODUCTS_LIST[2];
+PRODUCTS['444'] = PRODUCTS_LIST[3];
+
+/* ── Suppliers Database (Phase 3) ── */
+const SUPPLIERS = [
+  {
+    id: 'baghdad',
+    name: 'Baghdad Central Distributors',
+    nameAr: 'موزعو بغداد المركزيون',
+    city: 'Baghdad', cityAr: 'بغداد',
+    phone: '+964 770 100 2001',
+    color: '#1e3a5f',
+    initial: 'B',
+  },
+  {
+    id: 'basra',
+    name: 'Basra Wholesale Meds',
+    nameAr: 'الأدوية بالجملة - البصرة',
+    city: 'Basra', cityAr: 'البصرة',
+    phone: '+964 770 200 3002',
+    color: '#1a3a2a',
+    initial: 'B',
+  },
+  {
+    id: 'erbil',
+    name: 'Erbil Pharma Hub',
+    nameAr: 'مركز أربيل للأدوية',
+    city: 'Erbil', cityAr: 'أربيل',
+    phone: '+964 750 300 4003',
+    color: '#2d1b4e',
+    initial: 'E',
+  },
+];
+
+/* ── App State ── */
+const LOW_STOCK_THRESHOLD = 10;
+let cart    = [];
+let lang    = 'en';
+let scanner = null;
+let scanning = false;
+let selectedPayment = 'cash';
+
+// Edit-stock modal state
+let esProductId = null;
+let esDelta     = 0;
+
+/* ── Staff Data (Phase 4) ── */
+const STAFF_LIST = [
+  { id: 's1', name: 'Sara Al-Bayati',  nameAr: 'سارة البياتي',   role: 'manager',     color: '#ffd54f', hub: 'baghdad', pin: '1111', salesToday: 3, active: true  },
+  { id: 's2', name: 'Kareem Jassim',   nameAr: 'كريم جاسم',      role: 'pharmacist',  color: '#00d4aa', hub: 'baghdad', pin: '2222', salesToday: 7, active: true  },
+  { id: 's3', name: 'Lana Mahmoud',    nameAr: 'لانا محمود',     role: 'cashier',     color: '#90b8ff', hub: 'basra',   pin: '3333', salesToday: 12, active: true },
+  { id: 's4', name: 'Tariq Al-Mosuli', nameAr: 'طارق الموصلي',  role: 'pharmacist_assist', color: '#c084fc', hub: 'erbil', pin: '4444', salesToday: 0, active: false },
+];
+let activeStaffId = 's2'; // default active user
+
+/* ── Payment Settings (Phase 4) ── */
+const paymentSettings = { cash: true, qi: true, transfer: true };
+
+/* ── Purchase Orders State (Phase 3) ── */
+let PO_LIST = [
+  // Pre-loaded dummy POs so the screen isn't empty on first launch
+  {
+    id: 'PO-001', num: 1,
+    supplierId: 'baghdad',
+    date: '2026-05-18',
+    status: 'received',
+    notes: 'Urgent delivery required before weekend.',
+    items: [
+      { productId: 'tymer',  qty: 100, unitPrice: 2500 },
+      { productId: 'arox',   qty: 50,  unitPrice: 4750 },
+    ],
+  },
+  {
+    id: 'PO-002', num: 2,
+    supplierId: 'basra',
+    date: '2026-05-20',
+    status: 'pending',
+    notes: '',
+    items: [
+      { productId: 'olopat', qty: 30,  unitPrice: 8500 },
+      { productId: 'hyfresh',qty: 60,  unitPrice: 6200 },
+    ],
+  },
+  {
+    id: 'PO-003', num: 3,
+    supplierId: 'erbil',
+    date: '2026-05-22',
+    status: 'canceled',
+    notes: 'Supplier out of stock.',
+    items: [
+      { productId: 'arox',   qty: 20,  unitPrice: 4750 },
+    ],
+  },
+];
+let _poNextNum = 4;           // auto-increment counter for new POs
+
+// New PO form state
+let npoItems    = [];         // [{ productId, qty, unitPrice }]
+let npoSupplier = null;       // supplier id
+let _viewingPO  = null;       // PO id open in detail modal
+
+/* ── Translations ── */
+const T = {
+  en: {
+    appLogo: 'PharmaPOS',
+    tapLabel: 'Tap to Scan',
+    tapSub: 'Point camera at barcode or QR',
+    cartTitle: 'Invoice',
+    clearBtn: 'Clear All',
+    emptyLabel: 'Scan a product to start the invoice',
+    totalLabel: 'Total',
+    totalSub: 'IQD · incl. VAT',
+    checkoutBtn: 'Checkout',
+    scannerReady: 'READY',
+    scannerActive: 'SCANNING',
+    itemsScanned: (n) => `${n} item${n!==1?'s':''} scanned`,
+    stopBtn: '■ Stop',
+    navPOS: 'POS', navInv: 'Stock', navPur: 'Orders', navTeam: 'Team', navSet: 'Settings',
+    // ── Inventory (Phase 2) ──
+    invScreenTitle: 'Inventory',
+    invScreenSub: 'Stock levels & re-order',
+    invAlertText: (n) => `${n} low stock`,
+    statSkusLbl: 'SKUs',
+    statUnitsLbl: 'Total Units',
+    statLowLbl: 'Low Stock',
+    invUnitsLabel: 'units',
+    lowStockBadge: '⚠ Low Stock — Reorder Needed',
+    reorderTip: 'Below minimum threshold. Place a purchase order.',
+    editStockBtn: 'Edit Stock',
+    esModalTitle: 'Edit Stock',
+    esCurrentLbl: 'Current Stock',
+    esAdjustLbl: 'Adjust by',
+    esNewTotalLbl: 'New Total',
+    esSetExactLbl: 'Or set exact value',
+    esSaveBtn: '✓ Save Stock',
+    esCancelBtn: 'Cancel',
+    toastStockSaved: (name) => `${name} stock updated`,
+    // ── Purchase Orders (Phase 3) ──
+    poScreenTitle: 'Purchase Orders',
+    poScreenSub: 'Supplier orders & history',
+    poStatTotalLbl: 'Total POs',
+    poStatPendingLbl: 'Pending',
+    poStatValueLbl: 'Total IQD',
+    poPendingText: (n) => `${n} pending`,
+    poEmptyTitle: 'No purchase orders yet',
+    poEmptyHint: 'Tap "+ New PO" to create your first order, or use "Generate PO" on a low-stock item.',
+    poFabLabel: 'New PO',
+    npoTitle: 'New Purchase Order',
+    npoSupplierLbl: 'Supplier',
+    npoSupplierPlaceholder: '— Select Supplier —',
+    npoItemsLbl: 'Order Items',
+    npoAddItemBtn: '+ Add Item',
+    npoNotesLbl: 'Notes (optional)',
+    npoNotesPh: 'Delivery instructions, batch info...',
+    npoTotalLbl: 'Order Total',
+    npoSubmitBtn: '📋 Submit Purchase Order',
+    npoCancelBtn: 'Cancel',
+    npoPickerTitle: 'Add Product',
+    generatePOBtn: 'Generate PO',
+    npoScanLbl: 'Add by Barcode',
+    npoScanBtn: 'Scan',
+    npoScanStop: '■ Stop',
+    npoBarcodePh: 'Type or scan barcode…',
+    npoScanActive: 'SCANNING',
+    npoScanReady: 'READY',
+    npoNotFound: 'Barcode not found in inventory',
+    npoAlreadyAdded: (name) => `${name} qty updated`,
+    // ── Item Intake Modal ──
+    iimTitle: 'Item Details',
+    iimBarcodeLbl: 'Barcode',
+    iimCompanyLbl: 'Company / Manufacturer',
+    iimQtyLbl: 'QTY',
+    iimExpLbl: 'EXP Date',
+    iimPurchaseLbl: 'Purchase Price',
+    iimSellingLbl: 'Selling Price',
+    iimLineTotalLbl: 'Line Total',
+    iimConfirmBtn: '✓ Confirm Item',
+    iimCancelBtn: 'Cancel',
+    iimCompanyPh: 'e.g. Baghdad Pharma Lab',
+    iimErrQty: 'Quantity is required',
+    iimErrPurchase: 'Purchase price is required',
+    iimErrSelling: 'Selling price is required',
+    iimErrExp: 'Expiry date is required',
+    iimLabelQty: (n) => `×${n} units`,
+    iimLabelPurchase: (p) => `Cost: ${p.toLocaleString()} IQD`,
+    iimLabelSelling: (p) => `Sell: ${p.toLocaleString()} IQD`,
+    iimLabelExp: (e) => `EXP: ${e}`,
+    iimLabelCompany: (c) => `${c}`,
+    podTitle: 'Order Details',
+    podNumLbl: 'PO Number',
+    podSupplierLbl: 'Supplier',
+    podDateLbl: 'Date',
+    podItemsLbl: 'Items',
+    podTotalLbl: 'Total',
+    podCloseLbl: 'Close',
+    podReceiveBtn: '✓ Mark Received',
+    podCancelBtn: '✗ Cancel Order',
+    statusPending: 'Pending',
+    statusReceived: 'Received',
+    statusCanceled: 'Canceled',
+    toastPOCreated: (num) => `PO #${num} created`,
+    toastPOReceived: (num) => `PO #${num} marked received`,
+    toastPOCanceled: (num) => `PO #${num} canceled`,
+    purTitle: 'Purchase Orders', purSub: 'Order from drug stores and suppliers. Track delivery status across hubs.',
+    teamTitle: 'Staff Management', teamSub: 'Multi-account logins, cashier tracking across Baghdad, Basra, and Erbil hubs.',
+    setTitle: 'Settings', setSub: 'Bilingual toggle, Qi Card / Cash payment configurations, Firebase sync settings.',
+    modalTitle: 'Confirm Payment',
+    modalItems: 'Items', modalSub: 'Subtotal', modalVat: 'VAT (0%)', modalTotal: 'Total',
+    payCash: 'Cash', payQi: 'Qi Card', payTransfer: 'Transfer',
+    confirmBtn: '✓ Confirm Sale', cancelBtn: 'Cancel',
+    toastScanned: (name) => `✓ ${name} added`,
+    toastNotFound: 'Product not found',
+    toastExists: (name) => `${name} qty updated`,
+    toastSaleComplete: '🎉 Sale complete!',
+    phaseBadge: (n) => `Phase ${n}`,
+    // ── Team (Phase 4) ──
+    teamScreenTitle: 'Team',
+    teamScreenSub: 'Staff & access control',
+    teamAddLbl: 'Add Staff',
+    teamStatTotalLbl: 'Staff',
+    teamStatActiveLbl: 'Active',
+    teamStatSalesLbl: 'Sales Today',
+    tabActiveStatusLbl: '● Active Session',
+    asTitle: 'Add Staff Member',
+    asNameLbl: 'Full Name',
+    asRoleLbl: 'Role',
+    asPinLbl: 'PIN Code (4 digits)',
+    asHubLbl: 'Hub Assignment',
+    asSaveBtn: '✓ Add Staff Member',
+    asCancelBtn: 'Cancel',
+    asRoleCashier: 'Cashier',
+    asRolePharmacist: 'Lead Pharmacist',
+    asRoleManager: 'Store Manager',
+    asRoleAssist: 'Pharmacist Assistant',
+    ssTitle: 'Switch Active User',
+    ssCancelBtn: 'Cancel',
+    toastStaffAdded: (name) => `${name} added to team`,
+    toastStaffSwitched: (name) => `Switched to ${name}`,
+    // ── Settings (Phase 4) ──
+    setScreenTitle: 'Settings',
+    setSectionPlan: 'Subscription',
+    setSectionPayment: 'Payment Methods',
+    setSectionLang: 'Language',
+    setSectionApp: 'App',
+    setPlanName: 'Premium Tier',
+    setPlanStatus: '● Active · Renews Jan 2027',
+    setPharmacyLbl: 'Pharmacy',
+    setHubLbl: 'Hub',
+    setCashTitle: 'Cash',
+    setCashSub: 'Accept physical banknotes',
+    setQiTitle: 'Qi Card',
+    setQiSub: 'Iraqi electronic payment card',
+    setTransferTitle: 'Bank Transfer',
+    setTransferSub: 'Direct bank or mobile transfer',
+    setLangTitle: 'App Language',
+    setLangSub: 'Interface and content language',
+    setVersionTitle: 'Version',
+    setFirebaseTitle: 'Firebase Sync',
+    setFirebaseSub: 'Cloud backend connection',
+    toastSaleWithStaff: (name, staff) => `${name} · by ${staff}`,
+  },  // ← closes en: {}
+  ar: {
+    appLogo: 'PharmaPOS',
+    tapLabel: 'اضغط للمسح',
+    tapSub: 'وجّه الكاميرا نحو الباركود أو QR',
+    cartTitle: 'الفاتورة',
+    clearBtn: 'مسح الكل',
+    emptyLabel: 'امسح منتجاً لبدء الفاتورة',
+    totalLabel: 'المجموع',
+    totalSub: 'دينار · شامل الضريبة',
+    checkoutBtn: 'الدفع',
+    scannerReady: 'جاهز',
+    scannerActive: 'يمسح…',
+    itemsScanned: (n) => `${n} منتج ممسوح`,
+    stopBtn: '■ إيقاف',
+    navPOS: 'بيع', navInv: 'مخزون', navPur: 'طلبات', navTeam: 'فريق', navSet: 'إعدادات',
+    // ── Inventory (Phase 2) ──
+    invScreenTitle: 'المخزون',
+    invScreenSub: 'مستويات المخزون وإعادة الطلب',
+    invAlertText: (n) => `${n} مخزون منخفض`,
+    statSkusLbl: 'منتج',
+    statUnitsLbl: 'إجمالي الوحدات',
+    statLowLbl: 'مخزون منخفض',
+    invUnitsLabel: 'وحدة',
+    lowStockBadge: '⚠ مخزون منخفض — يحتاج إعادة طلب',
+    reorderTip: 'أقل من الحد الأدنى. يُرجى إنشاء أمر شراء.',
+    editStockBtn: 'تعديل المخزون',
+    esModalTitle: 'تعديل المخزون',
+    esCurrentLbl: 'المخزون الحالي',
+    esAdjustLbl: 'التعديل بمقدار',
+    esNewTotalLbl: 'الإجمالي الجديد',
+    esSetExactLbl: 'أو أدخل قيمة محددة',
+    esSaveBtn: '✓ حفظ المخزون',
+    esCancelBtn: 'إلغاء',
+    toastStockSaved: (name) => `تم تحديث مخزون ${name}`,
+    // ── Purchase Orders (Phase 3) ──
+    poScreenTitle: 'أوامر الشراء',
+    poScreenSub: 'طلبات الموردين والسجل',
+    poStatTotalLbl: 'إجمالي الطلبات',
+    poStatPendingLbl: 'قيد الانتظار',
+    poStatValueLbl: 'الإجمالي دينار',
+    poPendingText: (n) => `${n} قيد الانتظار`,
+    poEmptyTitle: 'لا توجد أوامر شراء',
+    poEmptyHint: 'اضغط "+ طلب جديد" لإنشاء أول طلب، أو استخدم "توليد طلب" على منتج ناقص.',
+    poFabLabel: 'طلب جديد',
+    npoTitle: 'أمر شراء جديد',
+    npoSupplierLbl: 'المورد',
+    npoSupplierPlaceholder: '— اختر مورداً —',
+    npoItemsLbl: 'عناصر الطلب',
+    npoAddItemBtn: '+ أضف منتجاً',
+    npoNotesLbl: 'ملاحظات (اختياري)',
+    npoNotesPh: 'تعليمات التسليم أو معلومات الدفعة...',
+    npoTotalLbl: 'إجمالي الطلب',
+    npoSubmitBtn: '📋 إرسال أمر الشراء',
+    npoCancelBtn: 'إلغاء',
+    npoPickerTitle: 'أضف منتجاً',
+    generatePOBtn: 'توليد طلب',
+    npoScanLbl: 'إضافة بالباركود',
+    npoScanBtn: 'مسح',
+    npoScanStop: '■ إيقاف',
+    npoBarcodePh: 'اكتب أو امسح الباركود…',
+    npoScanActive: 'يمسح…',
+    npoScanReady: 'جاهز',
+    npoNotFound: 'الباركود غير موجود في المخزون',
+    npoAlreadyAdded: (name) => `تم تحديث كمية ${name}`,
+    // ── Item Intake Modal ──
+    iimTitle: 'تفاصيل المنتج',
+    iimBarcodeLbl: 'الباركود',
+    iimCompanyLbl: 'الشركة / المصنّع',
+    iimQtyLbl: 'الكمية',
+    iimExpLbl: 'تاريخ الانتهاء',
+    iimPurchaseLbl: 'سعر الشراء',
+    iimSellingLbl: 'سعر البيع',
+    iimLineTotalLbl: 'إجمالي الصف',
+    iimConfirmBtn: '✓ تأكيد المنتج',
+    iimCancelBtn: 'إلغاء',
+    iimCompanyPh: 'مثال: مختبر بغداد للأدوية',
+    iimErrQty: 'الكمية مطلوبة',
+    iimErrPurchase: 'سعر الشراء مطلوب',
+    iimErrSelling: 'سعر البيع مطلوب',
+    iimErrExp: 'تاريخ الانتهاء مطلوب',
+    iimLabelQty: (n) => `×${n} وحدة`,
+    iimLabelPurchase: (p) => `شراء: ${p.toLocaleString()} د.ع`,
+    iimLabelSelling: (p) => `بيع: ${p.toLocaleString()} د.ع`,
+    iimLabelExp: (e) => `انتهاء: ${e}`,
+    iimLabelCompany: (c) => `${c}`,
+    podTitle: 'تفاصيل الطلب',
+    podNumLbl: 'رقم الطلب',
+    podSupplierLbl: 'المورد',
+    podDateLbl: 'التاريخ',
+    podItemsLbl: 'المنتجات',
+    podTotalLbl: 'الإجمالي',
+    podCloseLbl: 'إغلاق',
+    podReceiveBtn: '✓ تم الاستلام',
+    podCancelBtn: '✗ إلغاء الطلب',
+    statusPending: 'قيد الانتظار',
+    statusReceived: 'مستلم',
+    statusCanceled: 'ملغى',
+    toastPOCreated: (num) => `تم إنشاء طلب #${num}`,
+    toastPOReceived: (num) => `تم تأكيد استلام طلب #${num}`,
+    toastPOCanceled: (num) => `تم إلغاء طلب #${num}`,
+    purTitle: 'أوامر الشراء', purSub: 'الطلب من مستودعات الأدوية ومتابعة التوصيل.',
+    teamTitle: 'إدارة الفريق', teamSub: 'تسجيل دخول متعدد الحسابات ومتابعة الصيادلة في بغداد والبصرة وأربيل.',
+    setTitle: 'الإعدادات', setSub: 'تبديل اللغة، إعداد Qi Card والدفع النقدي، ومزامنة Firebase.',
+    modalTitle: 'تأكيد الدفع',
+    modalItems: 'المنتجات', modalSub: 'المجموع الفرعي', modalVat: 'ضريبة (٠٪)', modalTotal: 'الإجمالي',
+    payCash: 'نقداً', payQi: 'بطاقة Qi', payTransfer: 'تحويل',
+    confirmBtn: '✓ تأكيد البيع', cancelBtn: 'إلغاء',
+    toastScanned: (name) => `✓ تم إضافة ${name}`,
+    toastNotFound: 'المنتج غير موجود',
+    toastExists: (name) => `تم تحديث كمية ${name}`,
+    toastSaleComplete: '🎉 تم البيع!',
+    phaseBadge: (n) => `المرحلة ${n}`,
+    // ── Team (Phase 4) ──
+    teamScreenTitle: 'الفريق',
+    teamScreenSub: 'الموظفون وصلاحيات الوصول',
+    teamAddLbl: 'إضافة موظف',
+    teamStatTotalLbl: 'موظف',
+    teamStatActiveLbl: 'نشط',
+    teamStatSalesLbl: 'مبيعات اليوم',
+    tabActiveStatusLbl: '● جلسة نشطة',
+    asTitle: 'إضافة موظف جديد',
+    asNameLbl: 'الاسم الكامل',
+    asRoleLbl: 'المنصب',
+    asPinLbl: 'رمز PIN (٤ أرقام)',
+    asHubLbl: 'الفرع',
+    asSaveBtn: '✓ إضافة الموظف',
+    asCancelBtn: 'إلغاء',
+    asRoleCashier: 'كاشير',
+    asRolePharmacist: 'صيدلاني رئيسي',
+    asRoleManager: 'مدير الفرع',
+    asRoleAssist: 'مساعد صيدلاني',
+    ssTitle: 'تبديل المستخدم النشط',
+    ssCancelBtn: 'إلغاء',
+    toastStaffAdded: (name) => `تمت إضافة ${name} للفريق`,
+    toastStaffSwitched: (name) => `تم التبديل إلى ${name}`,
+    // ── Settings (Phase 4) ──
+    setScreenTitle: 'الإعدادات',
+    setSectionPlan: 'الاشتراك',
+    setSectionPayment: 'طرق الدفع',
+    setSectionLang: 'اللغة',
+    setSectionApp: 'التطبيق',
+    setPlanName: 'الباقة المميزة',
+    setPlanStatus: '● نشط · يتجدد يناير 2027',
+    setPharmacyLbl: 'الصيدلية',
+    setHubLbl: 'الفرع',
+    setCashTitle: 'نقداً',
+    setCashSub: 'قبول الأوراق النقدية',
+    setQiTitle: 'بطاقة Qi',
+    setQiSub: 'بطاقة الدفع الإلكتروني العراقية',
+    setTransferTitle: 'تحويل بنكي',
+    setTransferSub: 'تحويل بنكي أو عبر الهاتف',
+    setLangTitle: 'لغة التطبيق',
+    setLangSub: 'لغة الواجهة والمحتوى',
+    setVersionTitle: 'الإصدار',
+    setFirebaseTitle: 'مزامنة Firebase',
+    setFirebaseSub: 'اتصال السحابة الخلفية',
+    toastSaleWithStaff: (name, staff) => `${name} · بواسطة ${staff}`,
+  }  // ← closes ar: {}
+}; // ← closes T = {}
+
+/* ── Language Switch ── */
+function setLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('btn-en').classList.toggle('active', l === 'en');
+  document.getElementById('btn-ar').classList.toggle('active', l === 'ar');
+  applyTranslations();
+  renderCart();
+  renderInventory();
+  renderPurchases();
+  renderTeam();
+  updateActiveUserChip();
+}
+
+function t(key, ...args) {
+  const val = T[lang][key];
+  return typeof val === 'function' ? val(...args) : val;
+}
+
+function applyTranslations() {
+  // Topbar
+  document.getElementById('app-logo').textContent = t('appLogo');
+  // Scanner
+  document.getElementById('tap-label').textContent = t('tapLabel');
+  document.getElementById('tap-sub').textContent   = t('tapSub');
+  document.getElementById('scanner-status-badge').textContent = scanning ? t('scannerActive') : t('scannerReady');
+  document.getElementById('stop-scan-btn').textContent = t('stopBtn');
+  updateScanCountBadge();
+  // Cart
+  document.getElementById('cart-title-label').textContent = t('cartTitle');
+  document.getElementById('clear-btn').textContent         = t('clearBtn');
+  document.getElementById('empty-label').textContent       = t('emptyLabel');
+  document.getElementById('total-label').textContent       = t('totalLabel');
+  document.getElementById('total-sub').textContent         = t('totalSub');
+  document.getElementById('checkout-label').textContent    = t('checkoutBtn');
+  // Nav
+  document.getElementById('nav-pos').textContent  = t('navPOS');
+  document.getElementById('nav-inv').textContent  = t('navInv');
+  document.getElementById('nav-pur').textContent  = t('navPur');
+  document.getElementById('nav-team').textContent = t('navTeam');
+  document.getElementById('nav-set').textContent  = t('navSet');
+  // Inventory screen (Phase 2)
+  document.getElementById('inv-screen-title').textContent = t('invScreenTitle');
+  document.getElementById('inv-screen-sub').textContent   = t('invScreenSub');
+  document.getElementById('stat-skus-lbl').textContent    = t('statSkusLbl');
+  document.getElementById('stat-units-lbl').textContent   = t('statUnitsLbl');
+  document.getElementById('stat-low-lbl').textContent     = t('statLowLbl');
+  // Edit stock modal
+  document.getElementById('es-modal-title').textContent   = t('esModalTitle');
+  document.getElementById('es-current-lbl').textContent   = t('esCurrentLbl');
+  document.getElementById('es-adjust-lbl').textContent    = t('esAdjustLbl');
+  document.getElementById('es-new-total-lbl').textContent = t('esNewTotalLbl');
+  document.getElementById('es-set-exact-lbl').textContent = t('esSetExactLbl');
+  document.getElementById('es-save-btn').textContent      = t('esSaveBtn');
+  document.getElementById('es-cancel-btn').textContent    = t('esCancelBtn');
+  // Purchases screen (Phase 3)
+  document.getElementById('po-screen-title').textContent  = t('poScreenTitle');
+  document.getElementById('po-screen-sub').textContent    = t('poScreenSub');
+  document.getElementById('po-stat-total-lbl').textContent   = t('poStatTotalLbl');
+  document.getElementById('po-stat-pending-lbl').textContent = t('poStatPendingLbl');
+  document.getElementById('po-stat-value-lbl').textContent   = t('poStatValueLbl');
+  document.getElementById('po-fab-label').textContent     = t('poFabLabel');
+  document.getElementById('npo-title').textContent        = t('npoTitle');
+  document.getElementById('npo-supplier-lbl').textContent = t('npoSupplierLbl');
+  document.getElementById('npo-supplier-placeholder').textContent = t('npoSupplierPlaceholder');
+  document.getElementById('npo-items-lbl').textContent    = t('npoItemsLbl');
+  document.getElementById('npo-add-item-btn').textContent = t('npoAddItemBtn');
+  document.getElementById('npo-notes-lbl').textContent    = t('npoNotesLbl');
+  document.getElementById('npo-total-lbl').textContent    = t('npoTotalLbl');
+  document.getElementById('npo-submit-btn').textContent   = t('npoSubmitBtn');
+  document.getElementById('npo-cancel-btn').textContent   = t('npoCancelBtn');
+  document.getElementById('npo-picker-title').textContent = t('npoPickerTitle');
+  document.getElementById('npo-picker-cancel').textContent = t('npoCancelBtn');
+  document.getElementById('npo-scan-lbl').textContent      = t('npoScanLbl');
+  document.getElementById('npo-scan-btn-label').textContent = t('npoScanBtn');
+  document.getElementById('npo-stop-btn').textContent       = t('npoScanStop');
+  document.getElementById('npo-scan-status-badge').textContent = t('npoScanReady');
+  const barcodeInput = document.getElementById('npo-barcode-input');
+  if (barcodeInput) barcodeInput.placeholder = t('npoBarcodePh');
+  // Item Intake Modal
+  document.getElementById('iim-title').textContent        = t('iimTitle');
+  document.getElementById('iim-barcode-lbl').textContent  = t('iimBarcodeLbl');
+  document.getElementById('iim-company-lbl').textContent  = t('iimCompanyLbl');
+  document.getElementById('iim-qty-lbl').innerHTML        = t('iimQtyLbl') + ' <span class="iim-required">*</span>';
+  document.getElementById('iim-exp-lbl').innerHTML        = t('iimExpLbl') + ' <span class="iim-required">*</span>';
+  document.getElementById('iim-purchase-lbl').innerHTML   = t('iimPurchaseLbl') + ' <span class="iim-required">*</span>';
+  document.getElementById('iim-selling-lbl').innerHTML    = t('iimSellingLbl') + ' <span class="iim-required">*</span>';
+  document.getElementById('iim-line-total-lbl').textContent = t('iimLineTotalLbl');
+  document.getElementById('iim-confirm-btn').textContent  = t('iimConfirmBtn');
+  document.getElementById('iim-cancel-btn').textContent   = t('iimCancelBtn');
+  document.getElementById('iim-company').placeholder      = t('iimCompanyPh');
+  document.getElementById('pod-title').textContent        = t('podTitle');
+  document.getElementById('pod-num-lbl').textContent      = t('podNumLbl');
+  document.getElementById('pod-supplier-lbl').textContent = t('podSupplierLbl');
+  document.getElementById('pod-date-lbl').textContent     = t('podDateLbl');
+  document.getElementById('pod-items-count-lbl').textContent = t('podItemsLbl');
+  document.getElementById('pod-total-lbl').textContent    = t('podTotalLbl');
+  document.getElementById('pod-close-btn').textContent    = t('podCloseLbl');
+  // Placeholder screens (Team, Settings)
+  document.getElementById('team-screen-title').textContent = t('teamScreenTitle');
+  document.getElementById('team-screen-sub').textContent   = t('teamScreenSub');
+  document.getElementById('team-add-lbl').textContent      = t('teamAddLbl');
+  document.getElementById('team-stat-total-lbl').textContent  = t('teamStatTotalLbl');
+  document.getElementById('team-stat-active-lbl').textContent = t('teamStatActiveLbl');
+  document.getElementById('team-stat-sales-lbl').textContent  = t('teamStatSalesLbl');
+  document.getElementById('tab-active-status-lbl').textContent = t('tabActiveStatusLbl');
+  document.getElementById('as-title').textContent    = t('asTitle');
+  document.getElementById('as-name-lbl').textContent = t('asNameLbl');
+  document.getElementById('as-role-lbl').textContent = t('asRoleLbl');
+  document.getElementById('as-pin-lbl').textContent  = t('asPinLbl');
+  document.getElementById('as-hub-lbl').textContent  = t('asHubLbl');
+  document.getElementById('as-save-btn').textContent = t('asSaveBtn');
+  document.getElementById('as-cancel-btn').textContent = t('asCancelBtn');
+  document.getElementById('as-role-cashier').textContent    = t('asRoleCashier');
+  document.getElementById('as-role-pharmacist').textContent = t('asRolePharmacist');
+  document.getElementById('as-role-manager').textContent    = t('asRoleManager');
+  document.getElementById('as-role-assist').textContent     = t('asRoleAssist');
+  document.getElementById('ss-title').textContent      = t('ssTitle');
+  document.getElementById('ss-cancel-btn').textContent = t('ssCancelBtn');
+  // Settings
+  document.getElementById('set-section-plan').textContent     = t('setSectionPlan');
+  document.getElementById('set-section-payment').textContent  = t('setSectionPayment');
+  document.getElementById('set-section-lang').textContent     = t('setSectionLang');
+  document.getElementById('set-section-app').textContent      = t('setSectionApp');
+  document.getElementById('set-plan-name').textContent        = t('setPlanName');
+  document.getElementById('set-plan-status').textContent      = t('setPlanStatus');
+  document.getElementById('set-pharmacy-lbl').textContent     = t('setPharmacyLbl');
+  document.getElementById('set-hub-lbl').textContent          = t('setHubLbl');
+  document.getElementById('set-cash-title').textContent       = t('setCashTitle');
+  document.getElementById('set-cash-sub').textContent         = t('setCashSub');
+  document.getElementById('set-qi-title').textContent         = t('setQiTitle');
+  document.getElementById('set-qi-sub').textContent           = t('setQiSub');
+  document.getElementById('set-transfer-title').textContent   = t('setTransferTitle');
+  document.getElementById('set-transfer-sub').textContent     = t('setTransferSub');
+  document.getElementById('set-lang-title').textContent       = t('setLangTitle');
+  document.getElementById('set-lang-sub').textContent         = t('setLangSub');
+  document.getElementById('set-version-title').textContent    = t('setVersionTitle');
+  document.getElementById('set-firebase-title').textContent   = t('setFirebaseTitle');
+  document.getElementById('set-firebase-sub').textContent     = t('setFirebaseSub');
+  // Checkout modal
+  document.getElementById('modal-title').textContent     = t('modalTitle');
+  document.getElementById('modal-items-lbl').textContent = t('modalItems');
+  document.getElementById('modal-sub-lbl').textContent   = t('modalSub');
+  document.getElementById('modal-vat-lbl').textContent   = t('modalVat');
+  document.getElementById('modal-total-lbl').textContent = t('modalTotal');
+  document.getElementById('pay-cash-lbl').textContent    = t('payCash');
+  document.getElementById('pay-qi-lbl').textContent      = t('payQi');
+  document.getElementById('pay-transfer-lbl').textContent = t('payTransfer');
+  document.getElementById('confirm-btn').textContent      = t('confirmBtn');
+  document.getElementById('cancel-lbl').textContent       = t('cancelBtn');
+  // Re-render inventory list to apply translated strings
+  if (document.getElementById('inv-list').children.length > 0) renderInventory();
+  // Re-render team list to apply translated role labels
+  if (document.getElementById('team-list').children.length > 0) renderTeam();
+}
+
+/* ── Screen Navigation ── */
+function switchScreen(name, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(name + '-screen').classList.add('active');
+  btn.classList.add('active');
+  if (name !== 'pos' && scanning) stopScanner();
+  if (name === 'inventory')  renderInventory();
+  if (name === 'purchases')  renderPurchases();
+  if (name === 'team')       renderTeam();
+}
+
+// Nav helper called from generatePO — switches without a button reference
+function switchScreenByName(name) {
+  const btn = document.querySelector(`[data-screen="${name}"]`);
+  if (btn) switchScreen(name, btn);
+}
+
+/* ── Scanner ── */
+
+/**
+ * iOS Safari REQUIRES three attributes on any <video> that streams camera
+ * input inline (i.e. not in the native fullscreen player):
+ *   playsinline  — keeps video inside the page instead of going fullscreen
+ *   muted        — required for autoplay policies
+ *   autoplay     — starts the stream without a user gesture on the video element
+ *
+ * html5-qrcode creates the <video> element internally AFTER .start() resolves,
+ * so we can't set these before the call. We use a MutationObserver to watch
+ * the #reader container and patch the element the instant it appears.
+ */
+let _videoObserver = null;
+
+function patchVideoForIOS(readerEl) {
+  // Disconnect any previous observer
+  if (_videoObserver) { _videoObserver.disconnect(); _videoObserver = null; }
+
+  function applyAttrs(video) {
+    video.setAttribute('playsinline', '');       // ← key iOS fix #1
+    video.setAttribute('webkit-playsinline', ''); // ← legacy Safari compat
+    video.setAttribute('muted', '');             // ← key iOS fix #2
+    video.setAttribute('autoplay', '');          // ← key iOS fix #3
+    video.muted = true;                          // also set the IDL property
+    // Ensure inline styling doesn't override our CSS max-height
+    video.style.maxHeight = '240px';
+    video.style.width = '100%';
+    video.style.objectFit = 'cover';
+  }
+
+  // Patch any <video> already present (unlikely but safe)
+  readerEl.querySelectorAll('video').forEach(applyAttrs);
+
+  // Watch for the library injecting <video> dynamically
+  _videoObserver = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      m.addedNodes.forEach(node => {
+        if (node.nodeName === 'VIDEO') applyAttrs(node);
+        // Also check subtree (library may wrap in a div)
+        if (node.querySelectorAll) node.querySelectorAll('video').forEach(applyAttrs);
+      });
+    }
+  });
+  _videoObserver.observe(readerEl, { childList: true, subtree: true });
+}
+
+function startScanner() {
+  // Block immediately if not on HTTPS (camera will silently fail on iOS)
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    showToast('⚠️ HTTPS required for camera', 'error');
+    return;
+  }
+
+  document.getElementById('tap-placeholder').classList.add('hidden');
+  document.getElementById('reader').classList.remove('hidden');
+  document.getElementById('scan-overlay').style.display = 'block';
+  document.getElementById('stop-scan-btn').style.display = 'block';
+  document.getElementById('scanner-status-badge').textContent = t('scannerActive');
+  scanning = true;
+
+  const readerEl = document.getElementById('reader');
+
+  // Start the MutationObserver BEFORE calling .start() so we never miss the
+  // <video> element being injected by the library.
+  patchVideoForIOS(readerEl);
+
+  scanner = new Html5Qrcode('reader', {
+    // Suppress the verbose library logs in production
+    verbose: false,
+    // experimentalFeatures.useBarCodeDetectorIfSupported leverages the
+    // native BarcodeDetector API on Chrome/Android for faster scanning
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+  });
+
+  const config = {
+    fps: 10,
+    qrbox: { width: Math.min(window.innerWidth - 80, 220), height: 160 },
+    aspectRatio: 1.5,
+    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+    // videoConstraints mirrors the exact getUserMedia call — 'environment'
+    // selects the rear camera on iOS without needing getCameras() (which
+    // triggers a second permission dialog on some iOS versions).
+    videoConstraints: {
+      facingMode: { ideal: 'environment' },
+      width:  { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+  };
+
+  // Use facingMode object directly — avoids getCameras() which causes a
+  // double permission prompt on iOS 16+ and fails on some iPhone models.
+  scanner.start(
+    { facingMode: { ideal: 'environment' } },
+    config,
+    onScanSuccess,
+    () => {} // per-frame decode errors are normal — suppress them
+  ).catch(err => {
+    console.error('Scanner start error:', err);
+    const msg = String(err);
+    if (/permission|denied/i.test(msg)) {
+      showToast('Camera permission denied', 'error');
+    } else if (/https|secure/i.test(msg)) {
+      showToast('⚠️ HTTPS required for camera', 'error');
+    } else {
+      showToast('Camera unavailable', 'error');
+    }
+    stopScanner();
+  });
+}
+
+function stopScanner() {
+  if (_videoObserver) { _videoObserver.disconnect(); _videoObserver = null; }
+  if (scanner && scanning) {
+    scanner.stop().catch(() => {}).finally(() => {
+      scanner = null;
+      scanning = false;
+      document.getElementById('tap-placeholder').classList.remove('hidden');
+      document.getElementById('reader').classList.add('hidden');
+      document.getElementById('scan-overlay').style.display = 'none';
+      document.getElementById('stop-scan-btn').style.display = 'none';
+      document.getElementById('scanner-status-badge').textContent = t('scannerReady');
+    });
+  }
+}
+
+function onScanSuccess(decodedText) {
+  // Brief debounce — ignore repeat scans within 1.5s
+  if (onScanSuccess._lastCode === decodedText && Date.now() - onScanSuccess._lastTime < 1500) return;
+  onScanSuccess._lastCode = decodedText;
+  onScanSuccess._lastTime = Date.now();
+
+  // Vibrate if supported
+  if (navigator.vibrate) navigator.vibrate(60);
+
+  addToCart(decodedText);
+}
+onScanSuccess._lastCode = null;
+onScanSuccess._lastTime = 0;
+
+/* ── Cart Logic ── */
+function addToCart(barcode) {
+  const product = PRODUCTS[barcode];
+  if (!product) {
+    showToast(t('toastNotFound'), 'error');
+    return;
+  }
+
+  const existing = cart.find(i => i.product.id === product.id);
+  if (existing) {
+    existing.qty++;
+    showToast(t('toastExists', lang === 'ar' ? product.nameAr : product.name), 'success');
+  } else {
+    cart.push({ product, qty: 1 });
+    showToast(t('toastScanned', lang === 'ar' ? product.nameAr : product.name), 'success');
+  }
+
+  renderCart();
+  updateScanCountBadge();
+}
+
+function removeFromCart(id) {
+  cart = cart.filter(i => i.product.id !== id);
+  renderCart();
+  updateScanCountBadge();
+}
+
+function changeQty(id, delta) {
+  const item = cart.find(i => i.product.id === id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) { removeFromCart(id); return; }
+  renderCart();
+}
+
+function clearCart() {
+  cart = [];
+  renderCart();
+  updateScanCountBadge();
+}
+
+function getTotal() {
+  return cart.reduce((sum, i) => sum + i.product.price * i.qty, 0);
+}
+
+function renderCart() {
+  const container = document.getElementById('cart-items');
+  const empty     = document.getElementById('empty-cart');
+  const checkBtn  = document.getElementById('checkout-btn');
+  const total     = getTotal();
+
+  document.getElementById('total-display').textContent = total.toLocaleString();
+  checkBtn.disabled = cart.length === 0;
+
+  if (cart.length === 0) {
+    empty.style.display = 'flex';
+    container.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  container.innerHTML = cart.map(({ product, qty }) => {
+    const name = lang === 'ar' ? product.nameAr : product.name;
+    const lineTotal = (product.price * qty).toLocaleString();
+    return `
+    <div class="cart-item" id="ci-${product.id}">
+      <div class="item-icon" style="background:${product.color};">${product.icon}</div>
+      <div class="item-info">
+        <div class="item-name">${name}</div>
+        <div class="item-meta num-ltr">${product.price.toLocaleString()} IQD · ${product.category}</div>
+      </div>
+      <div class="item-controls">
+        <button class="qty-btn qty-minus" onclick="changeQty('${product.id}',-1)">−</button>
+        <span class="qty-val num-ltr">${qty}</span>
+        <button class="qty-btn qty-plus"  onclick="changeQty('${product.id}',1)">+</button>
+      </div>
+      <div class="item-price num-ltr">${lineTotal}</div>
+    </div>`;
+  }).join('');
+}
+
+function updateScanCountBadge() {
+  const total = cart.reduce((s, i) => s + i.qty, 0);
+  document.getElementById('scan-count-badge').textContent = t('itemsScanned', total);
+}
+
+/* ── Checkout Modal ── */
+function openCheckout() {
+  if (cart.length === 0) return;
+  const total = getTotal();
+  const items = cart.reduce((s, i) => s + i.qty, 0);
+  document.getElementById('modal-items-val').textContent = items;
+  document.getElementById('modal-sub-val').textContent   = total.toLocaleString() + ' IQD';
+  document.getElementById('modal-total-val').textContent = total.toLocaleString() + ' IQD';
+
+  // Show/hide payment methods based on Settings toggles
+  ['cash','qi','transfer'].forEach(m => {
+    const el = document.getElementById('pay-' + m);
+    el.style.display = paymentSettings[m] ? '' : 'none';
+  });
+  // Auto-select first enabled method
+  const firstEnabled = ['cash','qi','transfer'].find(m => paymentSettings[m]);
+  if (firstEnabled && !paymentSettings[selectedPayment]) selectPayment(firstEnabled);
+
+  document.getElementById('checkout-modal').classList.add('open');
+}
+
+function closeCheckout() {
+  document.getElementById('checkout-modal').classList.remove('open');
+}
+
+function closeCheckoutOutside(e) {
+  if (e.target === document.getElementById('checkout-modal')) closeCheckout();
+}
+
+function selectPayment(method) {
+  selectedPayment = method;
+  ['cash','qi','transfer'].forEach(m => {
+    document.getElementById('pay-' + m).classList.toggle('selected', m === method);
+  });
+}
+
+function confirmSale() {
+  // Log the active staff member against this sale
+  const staff = STAFF_LIST.find(s => s.id === activeStaffId);
+  if (staff) staff.salesToday = (staff.salesToday || 0) + 1;
+  closeCheckout();
+  setTimeout(() => {
+    const staffName = staff ? (lang === 'ar' ? staff.nameAr : staff.name) : '';
+    showToast(staffName ? t('toastSaleWithStaff', t('toastSaleComplete'), staffName) : t('toastSaleComplete'), 'success');
+    clearCart();
+    renderTeam(); // update salesToday counter
+  }, 300);
+}
+
+/* ── Toast ── */
+let _toastTimer = null;
+function showToast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = ''; }, 2200);
+}
+
+/* ── Demo: simulate a scan from keyboard (dev helper) ── */
+// Type a barcode number in console: simulateScan('111')
+window.simulateScan = (code) => onScanSuccess(code);
+
+/* ════════════════════════════════════════════
+   PHASE 2 — INVENTORY MANAGEMENT
+════════════════════════════════════════════ */
+
+/* ── Re-Order Assistant ──
+   Continuously checks all stock levels.
+   Any product below LOW_STOCK_THRESHOLD gets flagged.
+   Called after every stock change and on tab switch.        */
+function checkReorderAlerts() {
+  const lowProducts = PRODUCTS_LIST.filter(p => p.stock < LOW_STOCK_THRESHOLD);
+  const chip = document.getElementById('inv-alert-chip');
+  const alertText = document.getElementById('inv-alert-text');
+
+  if (lowProducts.length > 0) {
+    chip.style.display = 'flex';
+    alertText.textContent = t('invAlertText', lowProducts.length);
+  } else {
+    chip.style.display = 'none';
+  }
+
+  // Update stats bar
+  const totalUnits = PRODUCTS_LIST.reduce((s, p) => s + p.stock, 0);
+  document.getElementById('stat-total-skus').textContent  = PRODUCTS_LIST.length;
+  document.getElementById('stat-total-units').textContent = totalUnits;
+  document.getElementById('stat-low-count').textContent   = lowProducts.length;
+}
+
+/* ── Render Inventory List ── */
+function renderInventory() {
+  const list = document.getElementById('inv-list');
+
+  list.innerHTML = PRODUCTS_LIST.map(p => {
+    const isLow  = p.stock < LOW_STOCK_THRESHOLD;
+    const name   = lang === 'ar' ? p.nameAr : p.name;
+    const cat    = lang === 'ar' ? p.categoryAr : p.category;
+    const stockClass = isLow ? 'low' : '';
+
+    return `
+    <div class="inv-row${isLow ? ' low-stock' : ''}" id="inv-row-${p.id}">
+      <div class="inv-row-main">
+
+        <!-- Icon -->
+        <div class="inv-product-icon" style="background:${p.color};">
+          ${p.icon}
+          <div class="low-dot"></div>
+        </div>
+
+        <!-- Name + meta -->
+        <div class="inv-product-info">
+          <div class="inv-product-name">${name}</div>
+          <div class="inv-product-meta">
+            <span class="num-ltr">${p.barcode}</span>
+            &nbsp;·&nbsp;${cat}
+            &nbsp;·&nbsp;<span class="num-ltr">${p.price.toLocaleString()} IQD</span>
+          </div>
+        </div>
+
+        <!-- Stock count -->
+        <div class="inv-stock-pill">
+          <div class="inv-stock-num ${stockClass} num-ltr">${p.stock}</div>
+          <div class="inv-stock-unit">${t('invUnitsLabel')}</div>
+        </div>
+
+        <!-- Edit button -->
+        <button class="inv-edit-btn" onclick="openEditStock('${p.id}')" title="${t('editStockBtn')}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Reorder warning bar (visible only when low-stock) -->
+      <div class="inv-reorder-bar">
+        <div class="inv-reorder-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          ${t('lowStockBadge')}
+        </div>
+        <button class="inv-gen-po-btn" onclick="generatePO('${p.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="12" height="12"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="12" y1="5" x2="12" y2="14"/><line x1="8" y1="10" x2="16" y2="10"/></svg>
+          ${t('generatePOBtn')}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  checkReorderAlerts();
+}
+
+/* ── Edit Stock Modal ── */
+function openEditStock(productId) {
+  const p = PRODUCTS_LIST.find(x => x.id === productId);
+  if (!p) return;
+
+  esProductId = productId;
+  esDelta     = 0;
+
+  // Populate modal
+  document.getElementById('es-icon').style.background = p.color;
+  document.getElementById('es-icon').textContent      = p.icon;
+  document.getElementById('es-name').textContent      = lang === 'ar' ? p.nameAr : p.name;
+  document.getElementById('es-barcode').textContent   = p.barcode;
+  document.getElementById('es-current-val').textContent = p.stock;
+  document.getElementById('es-exact-input').value     = '';
+  esRefreshDisplay(p);
+
+  document.getElementById('edit-stock-modal').classList.add('open');
+}
+
+function esRefreshDisplay(p) {
+  const prod = p || PRODUCTS_LIST.find(x => x.id === esProductId);
+  const newTotal = Math.max(0, prod.stock + esDelta);
+  const sign = esDelta >= 0 ? '+' : '';
+
+  document.getElementById('es-delta-display').textContent = sign + esDelta;
+  document.getElementById('es-delta-display').style.color = esDelta < 0 ? '#ff8f8f' : '#00d4aa';
+  document.getElementById('es-new-total-val').textContent = newTotal + ' ' + t('invUnitsLabel');
+  document.getElementById('es-new-total-val').style.color = newTotal < LOW_STOCK_THRESHOLD ? '#ff8f8f' : '#00d4aa';
+}
+
+function esAdjust(delta) {
+  const p = PRODUCTS_LIST.find(x => x.id === esProductId);
+  if (!p) return;
+  // Clamp so new total never goes below 0
+  const proposed = p.stock + esDelta + delta;
+  if (proposed < 0) return;
+  esDelta += delta;
+  document.getElementById('es-exact-input').value = '';
+  esRefreshDisplay(p);
+}
+
+function esSetExact(val) {
+  const p = PRODUCTS_LIST.find(x => x.id === esProductId);
+  if (!p) return;
+  const n = parseInt(val, 10);
+  if (isNaN(n) || n < 0) return;
+  esDelta = n - p.stock;
+  esRefreshDisplay(p);
+}
+
+function confirmEditStock() {
+  const p = PRODUCTS_LIST.find(x => x.id === esProductId);
+  if (!p) return;
+  p.stock = Math.max(0, p.stock + esDelta);
+  closeEditStock();
+  renderInventory();
+  showToast(t('toastStockSaved', lang === 'ar' ? p.nameAr : p.name), 'success');
+}
+
+function closeEditStock() {
+  document.getElementById('edit-stock-modal').classList.remove('open');
+  esProductId = null;
+  esDelta     = 0;
+}
+
+function closeEditStockOutside(e) {
+  if (e.target === document.getElementById('edit-stock-modal')) closeEditStock();
+}
+
+/* ════════════════════════════════════════════
+   PHASE 3 — PURCHASE ORDERS
+════════════════════════════════════════════ */
+
+/* ── Helpers ── */
+function poGetSupplier(id) { return SUPPLIERS.find(s => s.id === id); }
+function poGetProduct(id)  { return PRODUCTS_LIST.find(p => p.id === id); }
+function poCalcTotal(po)   { return po.items.reduce((s, i) => s + i.qty * i.unitPrice, 0); }
+
+function poStatusLabel(status) {
+  return { pending: t('statusPending'), received: t('statusReceived'), canceled: t('statusCanceled') }[status] || status;
+}
+
+function poFormatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(lang === 'ar' ? 'ar-IQ' : 'en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function poSupplierName(s) {
+  return lang === 'ar' ? s.nameAr : s.name;
+}
+function poSupplierCity(s) {
+  return lang === 'ar' ? s.cityAr : s.city;
+}
+
+/* ── Render Purchases Screen ── */
+function renderPurchases() {
+  const list = document.getElementById('po-list');
+
+  // Stats
+  const pending   = PO_LIST.filter(p => p.status === 'pending').length;
+  const totalVal  = PO_LIST.reduce((s, p) => s + poCalcTotal(p), 0);
+  document.getElementById('po-stat-total').textContent   = PO_LIST.length;
+  document.getElementById('po-stat-pending').textContent = pending;
+  document.getElementById('po-stat-value').textContent   = (totalVal / 1000).toFixed(0) + 'K';
+
+  // Pending chip
+  const chip = document.getElementById('po-pending-chip');
+  if (pending > 0) {
+    chip.style.display = 'flex';
+    document.getElementById('po-pending-text').textContent = t('poPendingText', pending);
+  } else {
+    chip.style.display = 'none';
+  }
+
+  // Populate supplier dropdown (idempotent)
+  const sel = document.getElementById('npo-supplier-select');
+  while (sel.options.length > 1) sel.remove(1);
+  SUPPLIERS.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = poSupplierName(s);
+    sel.appendChild(opt);
+  });
+
+  // Empty state
+  if (PO_LIST.length === 0) {
+    list.innerHTML = `
+      <div class="po-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        <p><strong>${t('poEmptyTitle')}</strong><br>${t('poEmptyHint')}</p>
+      </div>`;
+    return;
+  }
+
+  // Sort: pending first, then by date desc
+  const sorted = [...PO_LIST].sort((a, b) => {
+    const statusOrder = { pending: 0, received: 1, canceled: 2 };
+    if (statusOrder[a.status] !== statusOrder[b.status]) return statusOrder[a.status] - statusOrder[b.status];
+    return b.num - a.num;
+  });
+
+  list.innerHTML = sorted.map(po => {
+    const sup    = poGetSupplier(po.supplierId);
+    const total  = poCalcTotal(po);
+    const items  = po.items.length;
+    const sName  = sup ? poSupplierName(sup) : po.supplierId;
+    const sColor = sup ? sup.color : '#2d3f61';
+    const sInit  = sup ? sup.initial : '?';
+
+    return `
+    <div class="po-row" onclick="openPODetail('${po.id}')">
+      <div class="po-row-main">
+        <div class="po-supplier-avatar" style="background:${sColor};">${sInit}</div>
+        <div class="po-row-info">
+          <div class="po-row-num">#PO-${String(po.num).padStart(3,'0')}</div>
+          <div class="po-row-meta">${sName} · ${poFormatDate(po.date)} · <span class="num-ltr">${items}</span> ${t('npoItemsLbl').toLowerCase()}</div>
+        </div>
+        <div class="po-row-right">
+          <div class="po-row-total num-ltr">${total.toLocaleString()} IQD</div>
+          <div class="po-status-badge ${po.status}">${poStatusLabel(po.status)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── Open PO Detail ── */
+function openPODetail(poId) {
+  const po  = PO_LIST.find(p => p.id === poId);
+  if (!po) return;
+  _viewingPO = poId;
+
+  const sup   = poGetSupplier(po.supplierId);
+  const total = poCalcTotal(po);
+
+  document.getElementById('pod-num').textContent         = `#PO-${String(po.num).padStart(3,'0')}`;
+  document.getElementById('pod-supplier').textContent    = sup ? poSupplierName(sup) : po.supplierId;
+  document.getElementById('pod-date').textContent        = poFormatDate(po.date);
+  document.getElementById('pod-items-count').textContent = po.items.length;
+  document.getElementById('pod-total').textContent       = total.toLocaleString() + ' IQD';
+
+  // Status badge
+  const badge = document.getElementById('pod-status-badge');
+  badge.textContent  = poStatusLabel(po.status);
+  badge.className    = 'po-status-badge ' + po.status;
+
+  // Items breakdown
+  document.getElementById('pod-items-breakdown').innerHTML = po.items.map(item => {
+    const p    = item.productId ? poGetProduct(item.productId) : null;
+    const name = p ? (lang === 'ar' ? p.nameAr : p.name) : (item.barcode || item.productId || '—');
+    const iconBg = p ? p.color : '#64748b';
+    const icon   = p ? p.icon : '📦';
+    const chips  = [];
+    if (item.company) chips.push(`<span style="background:#f1f5f9;border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:600;color:var(--ink-3);">${item.company}</span>`);
+    if (item.expiry)  chips.push(`<span style="background:#f1f5f9;border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:600;color:var(--ink-3);">EXP ${item.expiry}</span>`);
+    if (item.sellingPrice) chips.push(`<span style="background:#eff6ff;border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:600;color:var(--blue);">Sell ${item.sellingPrice.toLocaleString()} IQD</span>`);
+    return `
+    <div class="pod-item-row" style="flex-direction:column;align-items:stretch;gap:5px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:8px;background:${iconBg};display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">${icon}</div>
+        <div style="flex:1;font-size:0.82rem;font-weight:700;color:var(--ink);">${name}</div>
+        <div class="num-ltr" style="font-size:0.72rem;color:var(--ink-3);">×${item.qty}</div>
+        <div class="num-ltr" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--blue);min-width:70px;text-align:end;">${(item.qty*item.unitPrice).toLocaleString()} IQD</div>
+      </div>
+      ${chips.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;padding-inline-start:42px;">${chips.join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Action buttons (only for pending)
+  const actionsEl = document.getElementById('pod-actions');
+  if (po.status === 'pending') {
+    actionsEl.innerHTML = `
+      <button class="pod-action-btn pod-btn-receive" onclick="poMarkReceived('${po.id}')">${t('podReceiveBtn')}</button>
+      <button class="pod-action-btn pod-btn-cancel"  onclick="poCancelOrder('${po.id}')">${t('podCancelBtn')}</button>`;
+  } else {
+    actionsEl.innerHTML = '';
+  }
+
+  document.getElementById('po-detail-modal').classList.add('open');
+}
+
+function closePODetail() {
+  document.getElementById('po-detail-modal').classList.remove('open');
+  _viewingPO = null;
+}
+function closePODetailOutside(e) {
+  if (e.target === document.getElementById('po-detail-modal')) closePODetail();
+}
+
+/* ── Mark Received / Cancel ── */
+function poMarkReceived(poId) {
+  const po = PO_LIST.find(p => p.id === poId);
+  if (!po || po.status !== 'pending') return;
+  po.status = 'received';
+  closePODetail();
+  renderPurchases();
+  showToast(t('toastPOReceived', String(po.num).padStart(3,'0')), 'success');
+}
+
+function poCancelOrder(poId) {
+  const po = PO_LIST.find(p => p.id === poId);
+  if (!po || po.status !== 'pending') return;
+  po.status = 'canceled';
+  closePODetail();
+  renderPurchases();
+  showToast(t('toastPOCanceled', String(po.num).padStart(3,'0')), 'error');
+}
+
+/* ── New PO Modal ── */
+function openNewPO(prefillProductId) {
+  npoItems    = [];
+  npoSupplier = null;
+  document.getElementById('npo-supplier-select').value = '';
+  document.getElementById('npo-supplier-card').style.display = 'none';
+  document.getElementById('npo-notes').value = '';
+  document.getElementById('npo-notes').placeholder = t('npoNotesPh');
+  // Reset barcode scanner state
+  document.getElementById('npo-barcode-input').value = '';
+  stopPOScanner();
+
+  // Pre-fill product if called from inventory "Generate PO" — open intake form
+  if (prefillProductId) {
+    const p = poGetProduct(prefillProductId);
+    if (p) {
+      npoRenderItems();
+      document.getElementById('new-po-modal').classList.add('open');
+      setTimeout(() => openItemIntake(p.barcode, p), 200);
+      return;
+    }
+  }
+
+  npoRenderItems();
+  document.getElementById('new-po-modal').classList.add('open');
+}
+
+function closeNewPO() {
+  stopPOScanner();  // always kill camera when modal closes
+  document.getElementById('new-po-modal').classList.remove('open');
+}
+function closeNewPOOutside(e) {
+  if (e.target === document.getElementById('new-po-modal')) closeNewPO();
+}
+
+/* ── PO Barcode Scanner ──
+   A separate Html5Qrcode instance from the POS scanner.
+   Uses the same iOS-safe patchVideoForIOS() helper but a
+   different DOM container (#npo-reader) and callback (onPOScanSuccess).
+   Both scanners are mutually exclusive — starting one stops the other.    */
+let poScanner    = null;
+let poScanning   = false;
+let _poVideoObs  = null;   // separate MutationObserver for PO reader
+
+function patchVideoForIOS_PO(readerEl) {
+  if (_poVideoObs) { _poVideoObs.disconnect(); _poVideoObs = null; }
+  function applyAttrs(v) {
+    v.setAttribute('playsinline','');
+    v.setAttribute('webkit-playsinline','');
+    v.setAttribute('muted','');
+    v.setAttribute('autoplay','');
+    v.muted = true;
+    v.style.maxHeight = '200px';
+    v.style.width = '100%';
+    v.style.objectFit = 'cover';
+  }
+  readerEl.querySelectorAll('video').forEach(applyAttrs);
+  _poVideoObs = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      m.addedNodes.forEach(node => {
+        if (node.nodeName === 'VIDEO') applyAttrs(node);
+        if (node.querySelectorAll) node.querySelectorAll('video').forEach(applyAttrs);
+      });
+    }
+  });
+  _poVideoObs.observe(readerEl, { childList: true, subtree: true });
+}
+
+function togglePOScanner() {
+  if (poScanning) { stopPOScanner(); return; }
+  startPOScanner();
+}
+
+function startPOScanner() {
+  // Cannot run both scanners simultaneously — stop POS scanner first
+  if (scanning) stopScanner();
+
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    showToast('⚠️ HTTPS required for camera', 'error');
+    return;
+  }
+
+  // Show the camera container
+  document.getElementById('npo-scanner-wrap').style.display = 'block';
+  document.getElementById('npo-scan-status-badge').textContent = t('npoScanActive');
+  document.getElementById('npo-scan-btn').classList.add('scanning');
+  document.getElementById('npo-scan-btn-label').textContent = t('npoScanStop');
+  poScanning = true;
+
+  const readerEl = document.getElementById('npo-reader');
+  patchVideoForIOS_PO(readerEl);
+
+  poScanner = new Html5Qrcode('npo-reader', {
+    verbose: false,
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+  });
+
+  const config = {
+    fps: 10,
+    qrbox: { width: Math.min(window.innerWidth - 100, 200), height: 140 },
+    aspectRatio: 1.5,
+    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+    videoConstraints: {
+      facingMode: { ideal: 'environment' },
+      width:  { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+  };
+
+  poScanner.start(
+    { facingMode: { ideal: 'environment' } },
+    config,
+    onPOScanSuccess,
+    () => {}
+  ).catch(err => {
+    console.error('PO scanner error:', err);
+    const msg = String(err);
+    if (/permission|denied/i.test(msg)) showToast('Camera permission denied', 'error');
+    else showToast('Camera unavailable', 'error');
+    stopPOScanner();
+  });
+}
+
+function stopPOScanner() {
+  if (_poVideoObs) { _poVideoObs.disconnect(); _poVideoObs = null; }
+  if (poScanner && poScanning) {
+    poScanner.stop().catch(() => {}).finally(() => {
+      poScanner  = null;
+      poScanning = false;
+      document.getElementById('npo-scanner-wrap').style.display = 'none';
+      document.getElementById('npo-scan-btn').classList.remove('scanning');
+      document.getElementById('npo-scan-btn-label').textContent = t('npoScanBtn');
+      document.getElementById('npo-scan-status-badge').textContent = t('npoScanReady');
+    });
+  } else {
+    // Even if not actively scanning, make sure UI is reset
+    poScanner  = null;
+    poScanning = false;
+    const wrap = document.getElementById('npo-scanner-wrap');
+    if (wrap) wrap.style.display = 'none';
+    const btn = document.getElementById('npo-scan-btn');
+    if (btn) btn.classList.remove('scanning');
+    const lbl = document.getElementById('npo-scan-btn-label');
+    if (lbl) lbl.textContent = t('npoScanBtn');
+  }
+}
+
+function onPOScanSuccess(decodedText) {
+  // 1.5 s debounce — same pattern as POS scanner
+  if (onPOScanSuccess._last === decodedText && Date.now() - onPOScanSuccess._time < 1500) return;
+  onPOScanSuccess._last = decodedText;
+  onPOScanSuccess._time = Date.now();
+  if (navigator.vibrate) navigator.vibrate(60);
+  // Stop scanner first, then open the intake form
+  stopPOScanner();
+  setTimeout(() => npoAddByBarcode(decodedText), 200);
+}
+onPOScanSuccess._last = null;
+onPOScanSuccess._time = 0;
+
+function npoAddByBarcode(barcode) {
+  const code = (barcode || '').trim();
+  if (!code) return;
+
+  const product = PRODUCTS[code];
+  // Open intake modal — with product pre-filled if found, or just barcode if not
+  openItemIntake(code, product || null);
+
+  // Clear the text input
+  const input = document.getElementById('npo-barcode-input');
+  if (input) input.value = '';
+}
+
+/* ── Item Intake Modal ── */
+let _iimProductId = null;  // product id being intake-d (null = unknown barcode)
+
+function openItemIntake(barcode, product) {
+  _iimProductId = product ? product.id : null;
+
+  // Product header
+  const header = document.getElementById('iim-product-header');
+  if (product) {
+    document.getElementById('iim-product-icon').style.background = product.color;
+    document.getElementById('iim-product-icon').textContent = product.icon;
+    document.getElementById('iim-product-name').textContent = lang === 'ar' ? product.nameAr : product.name;
+    document.getElementById('iim-product-meta').textContent = (lang === 'ar' ? product.categoryAr : product.category) + ' · ' + product.barcode;
+    header.style.display = 'flex';
+  } else {
+    header.style.display = 'none';
+  }
+
+  // Pre-fill fields
+  document.getElementById('iim-barcode').value         = barcode || '';
+  document.getElementById('iim-company').value         = '';
+  document.getElementById('iim-qty').value             = '50';
+  document.getElementById('iim-purchase-price').value  = product ? product.price : '';
+  document.getElementById('iim-selling-price').value   = product ? product.price : '';
+  document.getElementById('iim-exp').value             = '';
+
+  // Clear any error states
+  ['iim-barcode','iim-qty','iim-purchase-price','iim-selling-price','iim-exp'].forEach(id => {
+    document.getElementById(id).classList.remove('error');
+  });
+  document.getElementById('iim-line-total-val').textContent = '—';
+
+  // Live line-total preview
+  ['iim-qty','iim-purchase-price'].forEach(id => {
+    document.getElementById(id).oninput = updateIimLineTotal;
+  });
+
+  document.getElementById('item-intake-modal').classList.add('open');
+}
+
+function updateIimLineTotal() {
+  const qty   = parseInt(document.getElementById('iim-qty').value, 10) || 0;
+  const price = parseFloat(document.getElementById('iim-purchase-price').value) || 0;
+  const total = qty * price;
+  document.getElementById('iim-line-total-val').textContent = total > 0 ? total.toLocaleString() + ' IQD' : '—';
+}
+
+function confirmItemIntake() {
+  // Validate required fields
+  const barcode  = document.getElementById('iim-barcode').value.trim();
+  const company  = document.getElementById('iim-company').value.trim();
+  const qty      = parseInt(document.getElementById('iim-qty').value, 10);
+  const purchase = parseFloat(document.getElementById('iim-purchase-price').value);
+  const selling  = parseFloat(document.getElementById('iim-selling-price').value);
+  const exp      = document.getElementById('iim-exp').value;
+
+  let valid = true;
+
+  const require = (id, val, errKey) => {
+    const el = document.getElementById(id);
+    const ok = val && !isNaN(val) && val > 0;
+    el.classList.toggle('error', !ok);
+    if (!ok) { showToast(t(errKey), 'error'); valid = false; }
+    return ok;
+  };
+
+  if (!require('iim-qty', qty, 'iimErrQty')) return;
+  if (!require('iim-purchase-price', purchase, 'iimErrPurchase')) return;
+  if (!require('iim-selling-price', selling, 'iimErrSelling')) return;
+
+  if (!exp) {
+    document.getElementById('iim-exp').classList.add('error');
+    showToast(t('iimErrExp'), 'error');
+    return;
+  }
+  document.getElementById('iim-exp').classList.remove('error');
+
+  // Build the enriched item object
+  const item = {
+    productId:     _iimProductId,
+    barcode:       barcode,
+    company:       company,
+    qty:           qty,
+    unitPrice:     purchase,   // purchase price = cost from supplier
+    sellingPrice:  selling,
+    expiry:        exp,        // "YYYY-MM" from <input type="month">
+  };
+
+  // If this product is already in the draft PO, increment qty instead
+  if (_iimProductId) {
+    const existing = npoItems.find(i => i.productId === _iimProductId);
+    if (existing) {
+      existing.qty         += qty;
+      existing.unitPrice    = purchase;
+      existing.sellingPrice = selling;
+      existing.expiry       = exp;
+      existing.company      = company;
+    } else {
+      npoItems.push(item);
+    }
+  } else {
+    npoItems.push(item);
+  }
+
+  closeItemIntake();
+  npoRenderItems();
+  const pName = _iimProductId ? (poGetProduct(_iimProductId)?.[lang === 'ar' ? 'nameAr' : 'name'] || barcode) : barcode;
+  showToast(t('toastScanned', pName), 'success');
+}
+
+function closeItemIntake() {
+  document.getElementById('item-intake-modal').classList.remove('open');
+  _iimProductId = null;
+}
+function closeItemIntakeOutside(e) {
+  if (e.target === document.getElementById('item-intake-modal')) closeItemIntake();
+}
+
+function npoSupplierChanged() {
+  const val = document.getElementById('npo-supplier-select').value;
+  const sup = SUPPLIERS.find(s => s.id === val);
+  npoSupplier = val || null;
+
+  const card = document.getElementById('npo-supplier-card');
+  if (sup) {
+    document.getElementById('npo-s-avatar').textContent       = sup.initial;
+    document.getElementById('npo-s-avatar').style.background  = sup.color;
+    document.getElementById('npo-s-name').textContent         = poSupplierName(sup);
+    document.getElementById('npo-s-meta').textContent         = poSupplierCity(sup) + ' · ' + sup.phone;
+    card.style.display = 'block';
+  } else {
+    card.style.display = 'none';
+  }
+}
+
+function npoRenderItems() {
+  const el    = document.getElementById('npo-items-list');
+  const total = npoItems.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+  document.getElementById('npo-total-val').textContent = total.toLocaleString() + ' IQD';
+
+  if (npoItems.length === 0) {
+    el.innerHTML = `<div style="font-size:0.75rem;color:var(--ink-4);text-align:center;padding:16px 0;background:#f8fafc;border-radius:10px;border:1.5px dashed var(--border-s);">${t('npoAddItemBtn')}</div>`;
+    return;
+  }
+
+  // Helper: check if expiry is within 6 months
+  function isExpirySoon(expStr) {
+    if (!expStr) return false;
+    const exp  = new Date(expStr + '-01');
+    const diff = (exp - new Date()) / (1000 * 60 * 60 * 24 * 30);
+    return diff < 6;
+  }
+
+  el.innerHTML = npoItems.map((item, idx) => {
+    const p       = item.productId ? poGetProduct(item.productId) : null;
+    const name    = p ? (lang === 'ar' ? p.nameAr : p.name) : (item.barcode || item.productId || '—');
+    const lineTotal = (item.qty * item.unitPrice).toLocaleString();
+    const iconBg  = p ? p.color : '#64748b';
+    const icon    = p ? p.icon : '📦';
+    const expWarn = item.expiry && isExpirySoon(item.expiry);
+
+    // Detail chips
+    const chips = [];
+    if (item.company) chips.push(`<span class="detail-chip">${t('iimLabelCompany', item.company)}</span>`);
+    if (item.expiry)  chips.push(`<span class="detail-chip${expWarn ? ' exp-warn' : ''}">${t('iimLabelExp', item.expiry)}</span>`);
+    if (item.unitPrice) chips.push(`<span class="detail-chip">${t('iimLabelPurchase', item.unitPrice)}</span>`);
+    if (item.sellingPrice) chips.push(`<span class="detail-chip">${t('iimLabelSelling', item.sellingPrice)}</span>`);
+
+    return `
+    <div class="npo-item-row" style="flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="npo-item-icon" style="background:${iconBg};">${icon}</div>
+        <div class="npo-item-name" style="flex:1;">${name}</div>
+        <div class="npo-item-qty-wrap">
+          <button class="npo-qty-btn npo-qty-minus" onclick="npoChangeQty(${idx},-1)">−</button>
+          <span class="npo-qty-val num-ltr">${item.qty}</span>
+          <button class="npo-qty-btn npo-qty-plus" onclick="npoChangeQty(${idx},+1)">+</button>
+        </div>
+        <div class="npo-item-price num-ltr">${lineTotal}</div>
+        <button class="npo-item-remove" onclick="npoRemoveItem(${idx})" title="Remove">✕</button>
+      </div>
+      ${chips.length ? `<div class="npo-item-row-detail">${chips.join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function npoChangeQty(idx, delta) {
+  npoItems[idx].qty = Math.max(1, npoItems[idx].qty + delta);
+  npoRenderItems();
+}
+
+function npoRemoveItem(idx) {
+  npoItems.splice(idx, 1);
+  npoRenderItems();
+}
+
+/* ── Product Picker (inside New PO) ── */
+function npoOpenAddProduct() {
+  const picker = document.getElementById('npo-product-picker');
+  const list   = document.getElementById('npo-picker-list');
+
+  list.innerHTML = PRODUCTS_LIST.map(p => {
+    const name = lang === 'ar' ? p.nameAr : p.name;
+    const already = npoItems.find(i => i.productId === p.id);
+    return `
+    <div class="npo-picker-row" onclick="npoAddProduct('${p.id}')">
+      <div style="width:36px;height:36px;border-radius:9px;background:${p.color};display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">${p.icon}</div>
+      <div style="flex:1;">
+        <div style="font-size:0.85rem;font-weight:700;">${name}</div>
+        <div style="font-size:0.68rem;color:#8899bb;margin-top:1px;" class="num-ltr">${p.price.toLocaleString()} IQD · ${p.stock} ${t('invUnitsLabel')}</div>
+      </div>
+      ${already ? `<div style="font-size:0.65rem;color:#00d4aa;font-weight:700;">✓ Added</div>` : ''}
+    </div>`;
+  }).join('');
+
+  picker.style.opacity = '0'; picker.style.pointerEvents = 'none';
+  picker.style.display !== 'flex' && (picker.style.display = 'flex');
+  requestAnimationFrame(() => {
+    picker.style.transition = 'opacity .3s ease';
+    picker.style.opacity = '1'; picker.style.pointerEvents = 'all';
+  });
+}
+
+function npoAddProduct(productId) {
+  const p = poGetProduct(productId);
+  if (!p) return;
+  closeNpoPicker();
+  // Open the intake form pre-filled with this product
+  setTimeout(() => openItemIntake(p.barcode, p), 150);
+}
+
+function closeNpoPicker() {
+  const picker = document.getElementById('npo-product-picker');
+  picker.style.opacity = '0'; picker.style.pointerEvents = 'none';
+}
+function closeNpoPickerOutside(e) {
+  if (e.target === document.getElementById('npo-product-picker')) closeNpoPicker();
+}
+
+/* ── Submit PO ── */
+function submitNewPO() {
+  if (!npoSupplier) { showToast(t('npoSupplierLbl') + ' required', 'error'); return; }
+  if (npoItems.length === 0) { showToast(t('npoAddItemBtn'), 'error'); return; }
+
+  const today = new Date().toISOString().split('T')[0];
+  const num   = _poNextNum++;
+  const newPO = {
+    id:         `PO-${String(num).padStart(3,'0')}`,
+    num,
+    supplierId: npoSupplier,
+    date:       today,
+    status:     'pending',
+    notes:      document.getElementById('npo-notes').value.trim(),
+    items:      npoItems.map(i => ({ ...i })),
+  };
+
+  PO_LIST.unshift(newPO);
+  closeNewPO();
+  renderPurchases();
+  showToast(t('toastPOCreated', String(num).padStart(3,'0')), 'success');
+}
+
+/* ── Generate PO from Inventory (Phase 2→3 bridge) ── */
+function generatePO(productId) {
+  switchScreenByName('purchases');
+  setTimeout(() => openNewPO(productId), 120);
+}
+
+/* ════════════════════════════════════════════
+   PHASE 4 — TEAM MANAGEMENT & SETTINGS
+════════════════════════════════════════════ */
+
+/* ── Staff role helpers ── */
+function staffRoleLabel(role) {
+  const map = {
+    manager:          { en: 'Store Manager',        ar: 'مدير الفرع' },
+    pharmacist:       { en: 'Lead Pharmacist',       ar: 'صيدلاني رئيسي' },
+    cashier:          { en: 'Cashier',               ar: 'كاشير' },
+    pharmacist_assist:{ en: 'Pharmacist Assistant',  ar: 'مساعد صيدلاني' },
+  };
+  return (map[role] || { en: role, ar: role })[lang];
+}
+
+function staffRoleClass(role) {
+  return 'role-' + (role || 'cashier');
+}
+
+function staffInitial(name) {
+  return (name || '?')[0].toUpperCase();
+}
+
+/* ── Update active user chip in topbar ── */
+function updateActiveUserChip() {
+  const staff = STAFF_LIST.find(s => s.id === activeStaffId);
+  if (!staff) return;
+  const name = lang === 'ar' ? staff.nameAr : staff.name;
+  document.getElementById('auc-avatar').textContent         = staffInitial(name);
+  document.getElementById('auc-avatar').style.background   = staff.color;
+  document.getElementById('auc-name').textContent           = name;
+}
+
+/* ── Render Team Screen ── */
+function renderTeam() {
+  const list     = document.getElementById('team-list');
+  const active   = STAFF_LIST.filter(s => s.active).length;
+  const salesToday = STAFF_LIST.reduce((sum, s) => sum + (s.salesToday || 0), 0);
+
+  // Stats
+  document.getElementById('team-stat-total').textContent  = STAFF_LIST.length;
+  document.getElementById('team-stat-active').textContent = active;
+  document.getElementById('team-stat-sales').textContent  = salesToday;
+
+  // Active banner
+  const activeStaff = STAFF_LIST.find(s => s.id === activeStaffId);
+  if (activeStaff) {
+    const name = lang === 'ar' ? activeStaff.nameAr : activeStaff.name;
+    document.getElementById('tab-active-avatar').textContent       = staffInitial(name);
+    document.getElementById('tab-active-avatar').style.background  = activeStaff.color;
+    document.getElementById('tab-active-name').textContent         = name;
+    document.getElementById('tab-active-role').textContent         = staffRoleLabel(activeStaff.role);
+  }
+
+  list.innerHTML = STAFF_LIST.map(staff => {
+    const name    = lang === 'ar' ? staff.nameAr : staff.name;
+    const isActive = staff.id === activeStaffId;
+    const hubLabel = staff.hub.charAt(0).toUpperCase() + staff.hub.slice(1);
+    return `
+    <div class="staff-row${isActive ? ' active-row' : ''}">
+      <div class="staff-avatar" style="background:${staff.color};">${staffInitial(name)}</div>
+      <div class="staff-info">
+        <div class="staff-name">${name}</div>
+        <div class="staff-meta">
+          <span class="staff-role-badge ${staffRoleClass(staff.role)}">${staffRoleLabel(staff.role)}</span>
+          &nbsp;<span style="font-size:0.65rem;color:#8899bb;">· ${hubLabel}</span>
+        </div>
+      </div>
+      <div class="staff-sales-badge num-ltr">${staff.salesToday || 0}</div>
+      <button class="staff-switch-btn${isActive ? ' active' : ''}" onclick="setActiveStaff('${staff.id}')" title="${isActive ? '✓' : t('ssTitle')}">
+        ${isActive
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
+        }
+      </button>
+    </div>`;
+  }).join('');
+}
+
+/* ── Set Active Staff ── */
+function setActiveStaff(staffId) {
+  activeStaffId = staffId;
+  updateActiveUserChip();
+  renderTeam();
+  const staff = STAFF_LIST.find(s => s.id === staffId);
+  if (staff) showToast(t('toastStaffSwitched', lang === 'ar' ? staff.nameAr : staff.name), 'success');
+}
+
+/* ── Add Staff Modal ── */
+function openAddStaff() {
+  document.getElementById('as-name-input').value = '';
+  document.getElementById('as-pin-input').value  = '';
+  document.getElementById('as-role-select').selectedIndex = 0;
+  document.getElementById('as-hub-select').selectedIndex  = 0;
+  document.getElementById('add-staff-modal').classList.add('open');
+}
+
+function closeAddStaff() {
+  document.getElementById('add-staff-modal').classList.remove('open');
+}
+function closeAddStaffOutside(e) {
+  if (e.target === document.getElementById('add-staff-modal')) closeAddStaff();
+}
+
+function submitAddStaff() {
+  const name = document.getElementById('as-name-input').value.trim();
+  const pin  = document.getElementById('as-pin-input').value.trim();
+  const role = document.getElementById('as-role-select').value;
+  const hub  = document.getElementById('as-hub-select').value;
+
+  if (!name) { showToast(t('asNameLbl') + ' required', 'error'); return; }
+  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { showToast(t('asPinLbl'), 'error'); return; }
+
+  // Derive Arabic name transliteration placeholder (in production, user would enter it)
+  const newStaff = {
+    id:         's' + Date.now(),
+    name,
+    nameAr:     name, // same until AR input is added in a future phase
+    role,
+    color:      ['#ffd54f','#00d4aa','#90b8ff','#c084fc','#ff8f8f'][STAFF_LIST.length % 5],
+    hub,
+    pin,
+    salesToday: 0,
+    active:     true,
+  };
+
+  STAFF_LIST.push(newStaff);
+  closeAddStaff();
+  renderTeam();
+  showToast(t('toastStaffAdded', name), 'success');
+}
+
+/* ── Staff Switcher (from topbar chip) ── */
+function openStaffSwitcher() {
+  const listEl = document.getElementById('ss-staff-list');
+  listEl.innerHTML = STAFF_LIST.filter(s => s.active).map(staff => {
+    const name     = lang === 'ar' ? staff.nameAr : staff.name;
+    const isActive = staff.id === activeStaffId;
+    return `
+    <div class="ss-row${isActive ? ' ss-active' : ''}" onclick="setActiveStaffFromSwitcher('${staff.id}')">
+      <div class="staff-avatar" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;background:${staff.color};display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:0.85rem;color:#0a0f1e;">${staffInitial(name)}</div>
+      <div style="flex:1;">
+        <div style="font-size:0.85rem;font-weight:700;">${name}</div>
+        <div style="font-size:0.68rem;color:#8899bb;margin-top:1px;">${staffRoleLabel(staff.role)}</div>
+      </div>
+      <div class="ss-check${isActive ? '' : ' empty'}">${isActive ? '✓' : ''}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('staff-switcher-modal').classList.add('open');
+}
+
+function setActiveStaffFromSwitcher(staffId) {
+  closeStaffSwitcher();
+  setTimeout(() => setActiveStaff(staffId), 200);
+}
+
+function closeStaffSwitcher() {
+  document.getElementById('staff-switcher-modal').classList.remove('open');
+}
+function closeStaffSwitcherOutside(e) {
+  if (e.target === document.getElementById('staff-switcher-modal')) closeStaffSwitcher();
+}
+
+/* ── Settings ── */
+function updatePaymentSetting(method, enabled) {
+  paymentSettings[method] = enabled;
+}
+
+/* ── Init ── */
+// Show HTTPS warning on insecure origins (file://, http://)
+(function checkHTTPS() {
+  const isSecure = location.protocol === 'https:' ||
+                   location.hostname === 'localhost' ||
+                   location.hostname === '127.0.0.1';
+  if (!isSecure) {
+    document.getElementById('https-warning').style.display = 'block';
+  }
+})();
+
+applyTranslations();
+renderCart();
+renderInventory();
+renderPurchases();
+renderTeam();
+updateActiveUserChip();
+</script>
+</body>
+</html>
